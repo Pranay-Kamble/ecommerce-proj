@@ -1,0 +1,35 @@
+# Binaries
+/bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test Output
+*.out
+
+# Go Workspaces (Optional, but good to ignore local workspace settings)
+go.work.sum
+
+# Dependency Directories (Vendor)
+vendor/
+
+# IDE Specific (GoLand / VS Code)
+.idea/
+.vscode/
+*.iml
+
+# OS Specific
+.DS_Store
+Thumbs.db
+
+# Environment Variables (Security!)
+.env
+*.env
+
+# Docker Volumes (If you mapped them locally)
+postgres_data/
+redis_data/
+rabbitmq_data/
+minio_data/

@@ -1,0 +1,85 @@
+In modern backend software engineering—particularly within Domain-Driven Design (DDD) and Clean Architecture—these four folders represent a standard structural approach designed to separate concerns, improve testability, and decouple business logic from technical infrastructure. [1, 2, 3]
+Here is a breakdown of what each folder typically contains and handles:
+1. Domain Folder
+This is the core of the application, often called the "Domain Model." It contains the business logic, rules, and data structures that define the problem space.
+
+• Contents: Entities (user, product), Value Objects, Domain Events, and interfaces for Repositories.
+• Responsibility: Defines what the application does, not how it does it. It should have zero dependencies on frameworks, databases, or external APIs. [9, 10, 11, 12, 13]
+
+2. Handler Folder (or Controller)
+The Handler acts as the entry point of the API, dealing with external requests. In many implementations, these are referred to as Controllers.
+
+• Contents: HTTP handlers, REST controllers, API routing, and input validation.
+• Responsibility: Receives input (e.g., JSON request), parses it, calls the appropriate Service, and maps the results to an HTTP response. [1, 17, 18, 19, 20]
+
+3. Service Folder
+The Service layer handles orchestration and application-specific business logic. It sits between the Handler and the Repository.
+
+• Contents: Use Case handlers (e.g., , ), application orchestration logic.
+• Responsibility: Orchestrates flow, manages transactions, and coordinates multiple repositories. It ensures that the business rules from the domain are correctly applied. [1, 9, 23, 24, 25]
+
+4. Repository Folder
+The Repository layer acts as a mediator between the domain and data-mapping layers, abstracting data access.
+
+• Contents: Implementation of database queries (SQL, Mongo, Redis), ORM models, and data mappers.
+• Responsibility: Manages data persistence (saving, updating, fetching). It hides the details of the database from the rest of the application, making it easier to switch from SQL to NoSQL, for example. [2, 26, 27, 28, 29]
+
+
+Summary of Data Flow (Example: Creating a User)
+1. Request hits the Handler.
+2. Handler parses the input and calls UserService (Service).
+3. Service applies business rules, creates a Domain object, and calls UserRepository (Repository).
+4. Repository saves the data to the Database.
+
+Comparison of Responsibilities
+
+| Folder [33, 34, 35] | Responsibility | Focus  |
+| --- | --- | --- |
+| Domain | Business Logic & Rules | The "What" (Business Model)  |
+| Handler | Request Parsing & Response | The "Entrance" (API/CLI)  |
+| Service | Orchestration & Use Cases | The "Glue" (Workflow)  |
+| Repository | Data Persistence & Queries | The "How" (Database/Storage)  |
+
+
+This structure is highly popular in Go, Java (Spring), and TypeScript applications to prevent "fat" controllers and maintain clean, testable code. [9, 36, 37, 38, 39]
+
+[1]https://medium.com/@albinaji.official/service-repository-pattern-in-action-0db4bb9a474b
+[2]https://medium.com/@leadcoder/repository-pattern-with-layered-architecture-35f7b9182ebf
+[3]https://medium.com/@eikhapoetra/building-a-scalable-backend-with-the-repository-pattern-in-golang-4c30e735034c
+[4]https://stackoverflow.com/questions/59509892/generally-speaking-what-is-a-domain-folder-what-does-it-mean-contain
+[5]https://www.reddit.com/r/SoftwareEngineering/comments/1jp7y1a/service_layer_becoming_too_big_do_you_know/
+[6]https://romanglushach.medium.com/domain-driven-design-ddd-a-guide-to-building-scalable-high-performance-systems-5314a7fe053c
+[7]https://www.linkedin.com/posts/milan-jovanovic_the-domain-layer-folder-structure-should-activity-7303755816870834177-N471
+[8]https://www.microtica.com/blog/the-concept-of-domain-driven-design-explained
+[9]https://stackoverflow.com/questions/2268699/domain-driven-design-domain-service-application-service
+[10]https://medium.com/@alessandro.traversi/understanding-domain-driven-design-ddd-main-layers-3cd1072393f8
+[11]https://medium.com/steve-cruz/domain-driven-design-ddd-file-structure-ade7fb26553d
+[12]https://developers.cyberagent.co.jp/blog/archives/59647/
+[13]https://pkg.go.dev/github.com/hendrorahmat/golang-clean-architecture
+[14]https://tom-collings.medium.com/controller-service-repository-16e29a4684e5
+[15]https://medium.com/@ryanfinlayson125/go-fundamental-series-2-syntax-and-file-structure-f090d27adaf8
+[16]https://medium.com/@christian.asterisk/building-a-scalable-monolithic-backend-with-go-fiber-folder-structure-explained-5d1023eafa5e
+[17]https://dev.to/jacobsngoodwin/03-application-architecture-5jk
+[18]https://www.linkedin.com/pulse/controller-service-repository-pattern-comprehensive-guide-shikder-azicc
+[19]https://dev.to/eugene-zimin/leveraging-domain-driven-design-for-application-design-58e2
+[20]https://andrew-larse514.medium.com/full-nestjs-starter-kit-part-1-http-endpoints-3241416c5f51
+[21]https://medium.com/@mohammedbasit362/breaking-free-from-mvc-hell-why-your-node-js-code-needs-the-service-repository-controller-pattern-c080725ab910
+[22]https://medium.com/@pudarimadhavi99/i-deleted-my-service-layer-in-spring-boot-and-my-code-got-10x-cleaner-af8fb366d463
+[23]https://dangillis.dev/posts/
+[24]https://medium.com/@mariorodrguezgalicia/clean-architecture-the-essential-developers-guide-cefb2e42dc99
+[25]https://medium.com/@michaelmaurice410/how-to-use-the-domain-event-pattern-ddd-clean-architecture-net-9-76a6c314e610
+[26]https://learn.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/infrastructure-persistence-layer-design
+[27]https://medium.com/@DrunknCode/clean-architecture-simplified-and-in-depth-guide-026333c54454
+[28]https://medium.com/@joshuasajeevnv/how-to-implement-repository-pattern-in-golang-go-ff2625fe407f
+[29]https://academy.creatio.com/docs/developer/back_end_development/data_operations_back_end/orm/overview
+[30]http://www.ir.juit.ac.in:8080/jspui/bitstream/123456789/9833/1/Building%20a%20RESTful%20API%20with%20Go%20using%20Three%20Layered%20Architecture.pdf
+[31]https://www.linkedin.com/pulse/provider-vs-service-helper-heemi-hanif-tqdac
+[32]https://stackoverflow.com/questions/10678410/domain-object-construction-responsibility-should-i-use-domain-objects-in-servic
+[33]https://www.ibm.com/docs/SSLSQH_10.1.0/com.ibm.mdmhs.dev.gd.doc/concepts/c_understandingrequesthandler.html
+[34]https://www.llamaindex.ai/blog/introducing-llama-deploy-a-microservice-based-way-to-deploy-llamaindex-workflows
+[35]https://www.reddit.com/r/laravel/comments/t4a82l/service_repository_pattern/
+[36]https://dakaii.medium.com/repository-pattern-in-golang-d22d3fa76d91
+[37]https://dev.to/blindpupil/domain-driven-architecture-in-the-frontend-ii-1dm9
+[38]https://osmancea.medium.com/domain-modeling-for-frontend-applications-using-typescript-2bc162fd94a0
+[39]https://www.reddit.com/r/golang/comments/1kbxc5s/introducing_godddblueprint_a_go_ddd_architecture/
+

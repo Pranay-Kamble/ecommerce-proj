@@ -1,0 +1,73 @@
+version: '3.8'
+
+# Future Todos
+# Use .env file to remove usernames and passwords
+
+services:
+  # ============================================================
+  # SERVICE 1: POSTGRESQL (The Main Database)
+  # ============================================================
+  postgres:
+    image: postgres:15-alpine  # Use the lightweight 'Alpine' version of Postgres 15
+    container_name: nexus_postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=postgres
+    volumes:
+      # This maps local 'init.sql' file into the container's
+      # special startup folder. This is how the 5 DBs get created automatically
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres_data:/var/lib/postgresql/data
+
+  # ============================================================
+  # SERVICE 2: REDIS (The Temporary Memory / Cache)
+  # ============================================================
+  redis:
+    image: redis:7-alpine
+    container_name: nexus_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  # ============================================================
+  # SERVICE 3: RABBITMQ (The Messenger)
+  # ============================================================
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: nexus_rabbitmq
+    ports:
+      - "5672:5672"   # The port Go code uses to send messages
+      - "15672:15672" # The port used to see the Dashboard in browser
+    environment:
+      - RABBITMQ_DEFAULT_USER=admin
+      - RABBITMQ_DEFAULT_PASS=password
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+  # ============================================================
+  # SERVICE 4: MINIO (The File Storage -> Fake AWS S3)
+  # ============================================================
+  minio:
+    image: minio/minio
+    container_name: nexus_minio
+    ports:
+      - "9000:9000" # The API port (for code)
+      - "9001:9001" # The Console port (for browser)
+    environment:
+      - MINIO_ROOT_USER=admin
+      - MINIO_ROOT_PASSWORD=password
+    # This command starts the server and tells it to serve the UI on port 9001
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+
+# This section declares the "Hard Drives" (Volumes) we used above, for data persistence when docker container is closed
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:
+  minio_data:
