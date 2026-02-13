@@ -1,12 +1,12 @@
-go 1.25.3
+go 1.26
 
 use (
 	./pkg
 	./services/auth
+	./services/cart
 	./services/catalog
 	./services/logistics
+	./services/order
 	./services/payment
 	./services/search
-	./services/cart
-	./services/order
 )
