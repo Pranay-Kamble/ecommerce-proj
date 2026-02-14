@@ -2,11 +2,10 @@ package repository
 
 import (
 	"context"
-	"ecommerce/pkg/logger"
 	"ecommerce/services/auth/internal/domain"
 	"errors"
+	"fmt"
 
-	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -26,8 +25,7 @@ func (u *userRepository) CreateUser(ctx context.Context, user *domain.User) erro
 	err := gorm.G[domain.User](u.db).Create(ctx, user)
 
 	if err != nil {
-		logger.Error("could not create user", zap.Error(err))
-		return err
+		return fmt.Errorf("repository: could not create user: %w", err)
 	}
 
 	return nil
@@ -41,8 +39,7 @@ func (u *userRepository) GetUserByEmail(ctx context.Context, email string) (*dom
 	}
 
 	if err != nil {
-		logger.Error("could not get user by email", zap.Error(err))
-		return nil, err
+		return nil, fmt.Errorf("repository: could not get user by email: %w", err)
 	}
 
 	return &res, nil
@@ -56,8 +53,7 @@ func (u *userRepository) GetUserByProviderID(ctx context.Context, providerID str
 	}
 
 	if err != nil {
-		logger.Error("could not get user by provider id", zap.Error(err))
-		return nil, err
+		return nil, fmt.Errorf("repository: could not get user by provider id: %w", err)
 	}
 
 	return &res, nil
@@ -67,8 +63,7 @@ func (u *userRepository) UpdateVerified(ctx context.Context, userID string) erro
 	_, err := gorm.G[domain.User](u.db).Where("id = ?", userID).Update(ctx, "is_verified", true)
 
 	if err != nil {
-		logger.Error("could not update verified user", zap.Error(err))
-		return err
+		return fmt.Errorf("repository: could not update verified user: %w", err)
 	}
 
 	return nil
