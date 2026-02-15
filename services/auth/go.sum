@@ -1,3 +1,5 @@
+github.com/golang-jwt/jwt/v5 v5.3.1 h1:kYf81DTWFe7t+1VvL7eS+jKFVWaUnK9cB1qbwn63YCY=
+github.com/golang-jwt/jwt/v5 v5.3.1/go.mod h1:fxCRLWMO43lRc8nhHWY6LGqRcf+1gQWArsqaEUEa5bE=
 github.com/sixafter/aes-ctr-drbg v1.17.0 h1:0Ma6OsmkZ9PiMlyA9BXq1vB8kXgXWFDiTZORGZG6Jug=
 github.com/sixafter/aes-ctr-drbg v1.17.0/go.mod h1:iOBiPPkiy5Z5cEWm2yCoqEtnkfafxNTokJLL0zOPZeQ=
 github.com/sixafter/nanoid v1.63.1 h1:uGuziNFVnjC4r8u/n2MHZwDfA1og3M9PbTQ7Uy7kU7o=

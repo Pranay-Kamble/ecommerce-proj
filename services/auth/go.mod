@@ -3,6 +3,7 @@ module ecommerce/services/auth
 go 1.26
 
 require (
+	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
 	github.com/sixafter/aes-ctr-drbg v1.17.0 // indirect
 	github.com/sixafter/nanoid v1.63.1 // indirect
 	github.com/sixafter/prng-chacha v1.15.0 // indirect
