@@ -24,6 +24,9 @@ vendor/
 .DS_Store
 Thumbs.db
 
+# Security
+*secrets/
+
 # Environment Variables (Security!)
 .env
 *.env
