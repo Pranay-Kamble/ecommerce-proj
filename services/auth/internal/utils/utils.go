@@ -2,6 +2,7 @@ package utils
 
 import (
 	"crypto/rsa"
+	"ecommerce/pkg/logger"
 	"errors"
 	"fmt"
 	"os"
@@ -42,16 +43,28 @@ func VerifyPassword(password, hash string) bool {
 }
 
 func InitKeys() error {
-	publicKeyPEM, err := os.ReadFile("../secrets/public.pem")
+
+	publicPemPath := os.Getenv("PUBLIC_PEM_PATH")
+	if publicPemPath == "" {
+		logger.Fatal("env variable PUBLIC_PEM_PATH not found")
+	}
+
+	privatePemPath := os.Getenv("PRIVATE_PEM_PATH")
+	if privatePemPath == "" {
+		logger.Fatal("env variable PRIVATE_PEM_PATH not found")
+	}
+
+	publicKeyPEM, err := os.ReadFile(publicPemPath)
 	if err != nil {
 		return fmt.Errorf("utils: failed to read public key: %w", err)
 	}
+
 	publicKey, err = jwt.ParseRSAPublicKeyFromPEM(publicKeyPEM)
 	if err != nil {
 		return fmt.Errorf("utils: failed to parse public key: %w", err)
 	}
 
-	privateKeyPEM, err := os.ReadFile("../secrets/private.pem")
+	privateKeyPEM, err := os.ReadFile(privatePemPath)
 	if err != nil {
 		return fmt.Errorf("utils: failed to read private key: %w", err)
 	}

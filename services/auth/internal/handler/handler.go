@@ -55,7 +55,7 @@ func (h *AuthHandler) RegisterNormal(c *gin.Context) {
 		logger.Error("handler: failed to register user", zap.Error(err))
 
 		if strings.Contains(err.Error(), "service: email already exists") {
-			c.JSON(http.StatusContinue, gin.H{"error": err.Error()})
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 			return
 		}
 
