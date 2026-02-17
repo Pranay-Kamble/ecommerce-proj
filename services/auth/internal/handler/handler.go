@@ -79,3 +79,7 @@ func (h *AuthHandler) RegisterNormal(c *gin.Context) {
 }
 
 func (h *AuthHandler) RegisterOAUTH(c *gin.Context) {}
+
+func (h *AuthHandler) GetPing(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"message": "pong"})
+}
