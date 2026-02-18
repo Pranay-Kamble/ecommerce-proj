@@ -52,14 +52,14 @@ func (h *AuthHandler) RegisterNormal(c *gin.Context) {
 	)
 
 	if err != nil {
-		logger.Error("handler: failed to register user", zap.Error(err))
-
 		if strings.Contains(err.Error(), "service: email already exists") {
-			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			logger.Error("handler: failed to register user (email already exists)")
+			c.JSON(http.StatusConflict, gin.H{"error": "email already exists"})
 			return
 		}
 
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		logger.Error("handler: failed to register user due to internal error", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		return
 	}
 
@@ -67,7 +67,7 @@ func (h *AuthHandler) RegisterNormal(c *gin.Context) {
 
 	if err != nil {
 		logger.Error("handler: failed to generate JWT", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		return
 	}
 
