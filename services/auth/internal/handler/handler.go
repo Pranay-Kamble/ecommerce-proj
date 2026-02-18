@@ -18,6 +18,10 @@ type RegisterRequest struct {
 	Role     string `json:"role" binding:"required"`
 }
 
+type LoginRequest struct {
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required,min=8"`
+}
 type AuthHandler struct {
 	service service.AuthService
 }
@@ -82,4 +86,45 @@ func (h *AuthHandler) RegisterOAUTH(c *gin.Context) {}
 
 func (h *AuthHandler) GetPing(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "pong"})
+}
+
+func (h *AuthHandler) Login(c *gin.Context) {
+	var request LoginRequest
+	err := c.ShouldBindJSON(&request)
+	if err != nil {
+		logger.Error("handler: failed to bind request body", zap.Error(err))
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	email := strings.ToLower(request.Email)
+	password := request.Password
+
+	res, err := h.service.Login(c.Request.Context(), email, password)
+	if err != nil {
+
+		errorString := err.Error()
+
+		if strings.Contains(errorString, "service: email does not exist") || strings.Contains(errorString, "service: invalid password") {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid email or password"})
+			return
+		}
+
+		logger.Error("handler: failed to login", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	jwt, err := utils.GetJWT(res.ID, res.Email, res.Role)
+
+	if err != nil {
+		logger.Error("handler: failed to generate JWT", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"jwt":     jwt,
+		"message": "User logged in",
+	})
 }
