@@ -7,11 +7,12 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"os"
+	"time"
+
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/sixafter/nanoid"
 	"golang.org/x/crypto/bcrypt"
-	"os"
-	"time"
 )
 
 var (
@@ -137,10 +138,10 @@ func GetRefreshToken() (string, string, string, error) {
 
 	hashedToken := HashUsingSHA256(refreshToken)
 
-	return refreshToken.String(), familyID.String(), hashedToken, nil
+	return refreshToken.String(), hashedToken, familyID.String(), nil
 }
 
 func HashUsingSHA256(text nanoid.ID) string {
-	hash := sha256.Sum256([]byte(text))
+	hash := sha256.Sum256([]byte(text.String()))
 	return hex.EncodeToString(hash[:])
 }

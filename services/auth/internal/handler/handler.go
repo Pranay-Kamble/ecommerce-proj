@@ -100,7 +100,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	email := strings.ToLower(request.Email)
 	password := request.Password
 
-	res, err := h.service.Login(c.Request.Context(), email, password)
+	userInfo, err := h.service.Login(c.Request.Context(), email, password)
 	if err != nil {
 
 		errorString := err.Error()
@@ -115,7 +115,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	jwt, err := utils.GetJWT(res.ID, res.Email, res.Role)
+	jwt, err := utils.GetJWT(userInfo.ID, userInfo.Email, userInfo.Role)
 
 	if err != nil {
 		logger.Error("handler: failed to generate JWT", zap.Error(err))
@@ -123,8 +123,31 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
+	refreshToken, hashedRefreshToken, familyId, err := utils.GetRefreshToken()
+	if err != nil {
+		logger.Error("handler: failed to generate refresh token", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		return
+	}
+
+	err = h.service.SaveRefreshToken(c.Request.Context(), userInfo.ID, hashedRefreshToken, familyId)
+	if err != nil {
+		logger.Error("handler: failed to save refresh token", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		return
+	}
+
+	c.SetCookie("refreshToken", refreshToken, 60*60*24, "/", "", false, true)
 	c.JSON(http.StatusOK, gin.H{
 		"jwt":     jwt,
 		"message": "User logged in",
 	})
+}
+
+func (h *AuthHandler) Refresh(context *gin.Context) {
+	panic("implement me")
+}
+
+func (h *AuthHandler) Logout(context *gin.Context) {
+	panic("implement me")
 }
