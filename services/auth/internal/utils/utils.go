@@ -2,14 +2,16 @@ package utils
 
 import (
 	"crypto/rsa"
+	"crypto/sha256"
 	"ecommerce/pkg/logger"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/sixafter/nanoid"
+	"golang.org/x/crypto/bcrypt"
 	"os"
 	"time"
-
-	"github.com/golang-jwt/jwt/v5"
-	"golang.org/x/crypto/bcrypt"
 )
 
 var (
@@ -120,4 +122,25 @@ func VerifyJWT(tokenString string) (jwt.MapClaims, error) {
 	}
 
 	return nil, errors.New("utils: invalid token claims format")
+}
+
+func GetRefreshToken() (string, string, string, error) {
+	refreshToken, err := nanoid.New()
+	if err != nil {
+		return "", "", "", fmt.Errorf("utils: failed to generate refresh token: %w", err)
+	}
+
+	familyID, err := nanoid.New()
+	if err != nil {
+		return "", "", "", fmt.Errorf("utils: failed to generate family id: %w", err)
+	}
+
+	hashedToken := HashUsingSHA256(refreshToken)
+
+	return refreshToken.String(), familyID.String(), hashedToken, nil
+}
+
+func HashUsingSHA256(text nanoid.ID) string {
+	hash := sha256.Sum256([]byte(text))
+	return hex.EncodeToString(hash[:])
 }
