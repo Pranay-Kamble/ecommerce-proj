@@ -7,6 +7,7 @@ import (
 	"ecommerce/services/auth/internal/utils"
 	"errors"
 	"fmt"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -14,18 +15,22 @@ import (
 type AuthService interface {
 	Register(ctx context.Context, name, email, password, role, provider, providerId string) (*domain.User, error)
 	Login(ctx context.Context, email, password string) (*domain.User, error)
+	//Refresh(ctx context.Context, refreshToken string) (*domain.User, error)
+	//Logout(ctx context.Context) error
+	SaveRefreshToken(ctx context.Context, userID, hashedRefreshToken, familyId string) error
 }
 
 type authService struct {
-	repo repository.UserRepository
+	userRepo  repository.UserRepository
+	tokenRepo repository.TokenRepository
 }
 
-func NewAuthService(repo repository.UserRepository) AuthService {
-	return &authService{repo: repo}
+func NewAuthService(userRepo repository.UserRepository, tokenRepo repository.TokenRepository) AuthService {
+	return &authService{userRepo: userRepo, tokenRepo: tokenRepo}
 }
 
 func (a *authService) Register(ctx context.Context, name, email, password, role, provider, providerId string) (*domain.User, error) {
-	res, err := a.repo.GetUserByEmail(ctx, email)
+	res, err := a.userRepo.GetUserByEmail(ctx, email)
 
 	if err != nil {
 		return nil, fmt.Errorf("service: failed to check email existence: %w", err)
@@ -44,7 +49,7 @@ func (a *authService) Register(ctx context.Context, name, email, password, role,
 
 	user := domain.User{Name: name, Email: email, Password: hashedPassword, Role: role, Provider: provider, ProviderID: providerId}
 
-	err = a.repo.CreateUser(ctx, &user)
+	err = a.userRepo.CreateUser(ctx, &user)
 	if err != nil {
 		return nil, fmt.Errorf("service: failed to create user: %w", err)
 	}
@@ -53,7 +58,7 @@ func (a *authService) Register(ctx context.Context, name, email, password, role,
 }
 
 func (a *authService) Login(ctx context.Context, email, password string) (*domain.User, error) {
-	res, err := a.repo.GetUserByEmail(ctx, email)
+	res, err := a.userRepo.GetUserByEmail(ctx, email)
 	if err != nil {
 		return nil, fmt.Errorf("service: failed to check email existence: %w", err)
 	}
@@ -68,4 +73,15 @@ func (a *authService) Login(ctx context.Context, email, password string) (*domai
 	}
 
 	return res, nil
+}
+
+func (a *authService) SaveRefreshToken(ctx context.Context, userID, hashedRefreshToken, familyID string) error {
+	refreshToken := domain.NewToken(userID, hashedRefreshToken, familyID, time.Now().Add(time.Hour*24*7))
+
+	err := a.tokenRepo.Create(ctx, refreshToken)
+
+	if err != nil {
+		return fmt.Errorf("service: failed to save refresh token: %w", err)
+	}
+	return nil
 }

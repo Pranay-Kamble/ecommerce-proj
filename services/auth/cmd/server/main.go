@@ -38,13 +38,14 @@ func main() {
 		logger.Fatal("main: failed to connect to database: %v", zap.Error(err))
 	}
 
-	err = db.AutoMigrate(&domain.User{})
+	err = db.AutoMigrate(&domain.User{}, &domain.Token{})
 	if err != nil {
 		return
 	}
 
-	repo := repository.NewUserRepository(db)
-	authService := service.NewAuthService(repo)
+	userRepo := repository.NewUserRepository(db)
+	tokenRepo := repository.NewTokenRepository(db)
+	authService := service.NewAuthService(userRepo, tokenRepo)
 	authHandler := handler.NewAuthHandler(authService)
 
 	err = utils.InitKeys()
