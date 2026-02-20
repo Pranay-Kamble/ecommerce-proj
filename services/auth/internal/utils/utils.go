@@ -125,7 +125,7 @@ func VerifyJWT(tokenString string) (jwt.MapClaims, error) {
 	return nil, errors.New("utils: invalid token claims format")
 }
 
-func GetRefreshToken() (string, string, string, error) {
+func GetRefreshTokenString() (string, string, string, error) {
 	refreshToken, err := nanoid.New()
 	if err != nil {
 		return "", "", "", fmt.Errorf("utils: failed to generate refresh token: %w", err)
@@ -144,4 +144,14 @@ func GetRefreshToken() (string, string, string, error) {
 func HashUsingSHA256(text nanoid.ID) string {
 	hash := sha256.Sum256([]byte(text.String()))
 	return hex.EncodeToString(hash[:])
+}
+
+func GetRefreshTokenStringWithFamilyID(familyID string) (string, string, error) {
+	refreshToken, err := nanoid.New()
+	if err != nil {
+		return "", "", fmt.Errorf("utils: failed to generate refresh token: %w", err)
+	}
+	hashedToken := HashUsingSHA256(refreshToken)
+
+	return refreshToken.String(), hashedToken, nil
 }

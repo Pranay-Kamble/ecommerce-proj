@@ -123,31 +123,63 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	refreshToken, hashedRefreshToken, familyId, err := utils.GetRefreshToken()
+	refreshToken, hashedRefreshToken, familyId, err := utils.GetRefreshTokenString()
 	if err != nil {
 		logger.Error("handler: failed to generate refresh token", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		return
 	}
 
-	err = h.service.SaveRefreshToken(c.Request.Context(), userInfo.ID, hashedRefreshToken, familyId)
+	_, err = h.service.SaveRefreshToken(c.Request.Context(), userInfo.ID, hashedRefreshToken, familyId)
 	if err != nil {
 		logger.Error("handler: failed to save refresh token", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		return
 	}
 
-	c.SetCookie("refreshToken", refreshToken, 60*60*24, "/", "", false, true)
+	c.SetCookie("refreshToken", refreshToken, 60*60*24*7, "/", "", false, true)
 	c.JSON(http.StatusOK, gin.H{
 		"jwt":     jwt,
 		"message": "User logged in",
 	})
 }
 
-func (h *AuthHandler) Refresh(context *gin.Context) {
-	panic("implement me")
+func (h *AuthHandler) Refresh(c *gin.Context) {
+	refreshToken, err := c.Cookie("refreshToken")
+
+	if err != nil {
+		logger.Error("handler: failed to get refresh token from cookie: ", zap.Error(err))
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid refresh token"})
+		return
+	}
+
+	newTokenString, tokenUser, err := h.service.RotateRefreshToken(c.Request.Context(), refreshToken)
+
+	if err != nil {
+		if strings.Contains(err.Error(), "service: refresh token not found") ||
+			strings.Contains(err.Error(), "service: refresh token is expired") ||
+			strings.Contains(err.Error(), "service: refresh token already used or revoked") ||
+			strings.Contains(err.Error(), "service: user not found") {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid refresh token"})
+			return
+		}
+
+		logger.Error("handler: failed to rotate refresh token", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		return
+	}
+
+	jwt, err := utils.GetJWT(tokenUser.ID, tokenUser.Email, tokenUser.Role)
+	if err != nil {
+		logger.Error("handler: failed to generate JWT", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		return
+	}
+
+	c.SetCookie("refreshToken", newTokenString, 60*60*24*7, "/", "", false, true)
+	c.JSON(http.StatusOK, gin.H{"msg": "refresh successful", "jwt": jwt})
 }
 
-func (h *AuthHandler) Logout(context *gin.Context) {
+func (h *AuthHandler) Logout(c *gin.Context) {
 	panic("implement me")
 }

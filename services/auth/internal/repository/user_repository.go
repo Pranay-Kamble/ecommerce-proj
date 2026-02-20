@@ -12,6 +12,7 @@ import (
 type UserRepository interface {
 	CreateUser(ctx context.Context, user *domain.User) error
 	GetUserByEmail(ctx context.Context, email string) (*domain.User, error)
+	GetUserByID(ctx context.Context, id string) (*domain.User, error)
 	GetUserByProviderID(ctx context.Context, providerID string) (*domain.User, error)
 	UpdateVerified(ctx context.Context, userID string) error
 }
@@ -40,6 +41,17 @@ func (u *userRepository) GetUserByEmail(ctx context.Context, email string) (*dom
 
 	if err != nil {
 		return nil, fmt.Errorf("repository: could not get user by email: %w", err)
+	}
+
+	return &res, nil
+}
+
+func (u *userRepository) GetUserByID(ctx context.Context, id string) (*domain.User, error) {
+	res, err := gorm.G[domain.User](u.db).Where("id = ?", id).First(ctx)
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	} else if err != nil {
+		return nil, fmt.Errorf("repository: could not get user by id: %w", err)
 	}
 
 	return &res, nil
