@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"ecommerce/services/auth/internal/domain"
+	"errors"
 	"fmt"
 
 	"gorm.io/gorm"
@@ -37,7 +38,9 @@ func (t *tokenRepository) Create(ctx context.Context, token *domain.Token) error
 func (t *tokenRepository) FindByTokenHash(ctx context.Context, tokenHash string) (*domain.Token, error) {
 	res, err := gorm.G[*domain.Token](t.db).Where("token_hash = ?", tokenHash).First(ctx)
 
-	if err != nil {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	} else if err != nil {
 		return nil, fmt.Errorf("repository: could not find token: %w", err)
 	}
 
