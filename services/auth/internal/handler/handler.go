@@ -4,6 +4,7 @@ import (
 	"ecommerce/pkg/logger"
 	"ecommerce/services/auth/internal/service"
 	"ecommerce/services/auth/internal/utils"
+	"errors"
 	"net/http"
 	"strings"
 
@@ -76,8 +77,8 @@ func (h *AuthHandler) RegisterNormal(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
-		"jwt":     jwt,
-		"message": "User created successfully",
+		"jwt": jwt,
+		"msg": "User created successfully",
 	})
 	logger.Info("handler: successfully registered user", zap.String("id", user.ID))
 }
@@ -85,7 +86,7 @@ func (h *AuthHandler) RegisterNormal(c *gin.Context) {
 func (h *AuthHandler) RegisterOAUTH(c *gin.Context) {}
 
 func (h *AuthHandler) GetPing(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"message": "pong"})
+	c.JSON(http.StatusOK, gin.H{"msg": "pong"})
 }
 
 func (h *AuthHandler) Login(c *gin.Context) {
@@ -139,8 +140,8 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	c.SetCookie("refreshToken", refreshToken, 60*60*24*7, "/", "", false, true)
 	c.JSON(http.StatusOK, gin.H{
-		"jwt":     jwt,
-		"message": "User logged in",
+		"jwt": jwt,
+		"msg": "User logged in",
 	})
 }
 
@@ -181,5 +182,23 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 }
 
 func (h *AuthHandler) Logout(c *gin.Context) {
-	panic("implement me")
+	refreshToken, err := c.Cookie("refreshToken")
+
+	if errors.Is(err, http.ErrNoCookie) {
+		c.JSON(http.StatusOK, gin.H{"msg": "logout successful"})
+		return
+	} else if err != nil {
+		logger.Error("handler: failed to get refresh token from cookie", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		return
+	}
+
+	err = h.service.Logout(c.Request.Context(), refreshToken)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		return
+	}
+
+	c.SetCookie("refreshToken", "", -1, "/", "", false, true)
+	c.JSON(http.StatusOK, gin.H{"msg": "logout successful"})
 }

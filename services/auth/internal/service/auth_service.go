@@ -17,13 +17,31 @@ type AuthService interface {
 	Register(ctx context.Context, name, email, password, role, provider, providerId string) (*domain.User, error)
 	Login(ctx context.Context, email, password string) (*domain.User, error)
 	RotateRefreshToken(ctx context.Context, refreshToken string) (string, *domain.User, error)
-	//Logout(ctx context.Context) error
+	Logout(ctx context.Context, refreshToken string) error
 	SaveRefreshToken(ctx context.Context, userID, hashedRefreshToken, familyId string) (*domain.Token, error)
 }
 
 type authService struct {
 	userRepo  repository.UserRepository
 	tokenRepo repository.TokenRepository
+}
+
+func (a *authService) Logout(ctx context.Context, refreshToken string) error {
+	hashToken := utils.HashUsingSHA256(nanoid.ID(refreshToken))
+	fullToken, err := a.tokenRepo.FindByTokenHash(ctx, hashToken)
+	if err != nil {
+		return fmt.Errorf("service: could not find token %w", err)
+	}
+
+	if fullToken == nil {
+		return nil
+	}
+
+	err = a.tokenRepo.RevokeTokenFamily(ctx, fullToken.FamilyID)
+	if err != nil {
+		return fmt.Errorf("service: could not revoke token family %w", err)
+	}
+	return nil
 }
 
 func NewAuthService(userRepo repository.UserRepository, tokenRepo repository.TokenRepository) AuthService {
