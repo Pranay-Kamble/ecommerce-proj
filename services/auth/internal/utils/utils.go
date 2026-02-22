@@ -16,8 +16,9 @@ import (
 )
 
 var (
-	privateKey *rsa.PrivateKey
-	publicKey  *rsa.PublicKey
+	privateKey   *rsa.PrivateKey
+	publicKey    *rsa.PublicKey
+	otpGenerator nanoid.Interface
 )
 
 func HashPassword(password string) (string, error) {
@@ -45,7 +46,7 @@ func VerifyPassword(password, hash string) bool {
 	return err == nil
 }
 
-func InitKeys() error {
+func Init(length int) error {
 
 	publicPemPath := os.Getenv("PUBLIC_PEM_PATH")
 	if publicPemPath == "" {
@@ -75,6 +76,15 @@ func InitKeys() error {
 	if err != nil {
 		return fmt.Errorf("utils: failed to parse private key: %w", err)
 	}
+
+	const digits = "0123456789"
+	otpGenerator, err = nanoid.NewGenerator(
+		nanoid.WithAlphabet(digits),
+		nanoid.WithLengthHint(uint16(length)))
+	if err != nil {
+		return fmt.Errorf("utils: failed to create OTP generator: %w", err)
+	}
+
 	return nil
 }
 
@@ -154,4 +164,13 @@ func GetRefreshTokenStringWithFamilyID(familyID string) (string, string, error) 
 	hashedToken := HashUsingSHA256(refreshToken)
 
 	return refreshToken.String(), hashedToken, nil
+}
+
+func GetOTP() (string, error) {
+	otp, err := otpGenerator.New()
+	if err != nil {
+		return "", fmt.Errorf("utils: failed to generate OTP: %w", err)
+	}
+
+	return otp.String(), nil
 }

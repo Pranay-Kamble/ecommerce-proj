@@ -27,13 +27,13 @@ func TestHashPassword(t *testing.T) {
 
 func TestInitKeys(t *testing.T) {
 
-	err := InitKeys()
+	err := Init(6)
 
-	assert.NoError(t, err, "InitKeys failed: check if the .pem files are in the right folder")
+	assert.NoError(t, err, "Init failed: check if the .pem files are in the right folder")
 }
 
 func TestJWTWorkflow(t *testing.T) {
-	err := InitKeys()
+	err := Init(6)
 	assert.NoError(t, err)
 
 	testID := "nano-12345"
@@ -56,7 +56,7 @@ func TestJWTWorkflow(t *testing.T) {
 }
 
 func TestVerifyJWTHacker(t *testing.T) {
-	err := InitKeys()
+	err := Init(6)
 	assert.NoError(t, err)
 
 	fakeToken := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.fake.signature"

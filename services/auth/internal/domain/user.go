@@ -18,9 +18,7 @@ type User struct {
 	Provider   string `gorm:"default:'email'" json:"provider"`
 	ProviderID string `gorm:"index" json:"-"`
 
-	IsVerified         bool       `gorm:"default:false" json:"isVerified"`
-	VerificationCode   string     `gorm:"index" json:"-"`
-	VerificationExpiry *time.Time `json:"-"`
+	IsVerified bool `gorm:"default:false" json:"isVerified"`
 
 	CreatedAt time.Time      `json:"createdAt"`
 	UpdatedAt time.Time      `json:"updatedAt"`
