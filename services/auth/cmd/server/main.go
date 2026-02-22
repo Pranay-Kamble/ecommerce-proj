@@ -48,7 +48,7 @@ func main() {
 	authService := service.NewAuthService(userRepo, tokenRepo)
 	authHandler := handler.NewAuthHandler(authService)
 
-	err = utils.InitKeys()
+	err = utils.Init(6)
 	if err != nil {
 		logger.Fatal("main: failed to load RSA keys: %v", zap.Error(err))
 	}
