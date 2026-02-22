@@ -24,6 +24,7 @@ type AuthService interface {
 type authService struct {
 	userRepo  repository.UserRepository
 	tokenRepo repository.TokenRepository
+	otpRepo   repository.OTPRepository
 }
 
 func (a *authService) Logout(ctx context.Context, refreshToken string) error {
@@ -44,8 +45,8 @@ func (a *authService) Logout(ctx context.Context, refreshToken string) error {
 	return nil
 }
 
-func NewAuthService(userRepo repository.UserRepository, tokenRepo repository.TokenRepository) AuthService {
-	return &authService{userRepo: userRepo, tokenRepo: tokenRepo}
+func NewAuthService(userRepo repository.UserRepository, tokenRepo repository.TokenRepository, otpRepo repository.OTPRepository) AuthService {
+	return &authService{userRepo: userRepo, tokenRepo: tokenRepo, otpRepo: otpRepo}
 }
 
 func (a *authService) Register(ctx context.Context, name, email, password, role, provider, providerId string) (*domain.User, error) {
