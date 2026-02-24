@@ -3,6 +3,7 @@ package main
 import (
 	"ecommerce/pkg/database"
 	"ecommerce/pkg/logger"
+	"ecommerce/services/auth/internal/client"
 	"ecommerce/services/auth/internal/domain"
 	"ecommerce/services/auth/internal/handler"
 	"ecommerce/services/auth/internal/repository"
@@ -73,7 +74,14 @@ func main() {
 	otpRepo := repository.NewOTPRepository(rd.Redis)
 
 	authService := service.NewAuthService(userRepo, tokenRepo, otpRepo)
-	authHandler := handler.NewAuthHandler(authService)
+
+	emailBaseURL := os.Getenv("EMAIL_SERVICE_BASE_URL")
+	if emailBaseURL == "" {
+		emailBaseURL = "http://localhost:8081/api/v1/email"
+	}
+
+	emailClient := client.NewEmailClient(emailBaseURL)
+	authHandler := handler.NewAuthHandler(authService, emailClient)
 
 	r := gin.Default()
 	handler.RegisterRoutes(r, authHandler)
