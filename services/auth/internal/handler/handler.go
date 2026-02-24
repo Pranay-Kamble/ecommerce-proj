@@ -2,11 +2,13 @@ package handler
 
 import (
 	"ecommerce/pkg/logger"
+	"ecommerce/services/auth/internal/client"
 	"ecommerce/services/auth/internal/service"
 	"ecommerce/services/auth/internal/utils"
 	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -23,12 +25,25 @@ type LoginRequest struct {
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required,min=8"`
 }
+
+type VerifyRequest struct {
+	Email string `json:"email" binding:"required,email"`
+	OTP   string `json:"otp" binding:"required,len=6,numeric"`
+}
 type AuthHandler struct {
-	service service.AuthService
+	service     service.AuthService
+	emailClient client.EmailClient
 }
 
-func NewAuthHandler(service service.AuthService) AuthHandler {
-	return AuthHandler{service: service}
+type ResendOTPRequest struct {
+	Email string `json:"email" binding:"required,email"`
+}
+
+func NewAuthHandler(service service.AuthService, emailClient client.EmailClient) AuthHandler {
+	return AuthHandler{
+		service:     service,
+		emailClient: emailClient,
+	}
 }
 
 func (h *AuthHandler) RegisterNormal(c *gin.Context) {
@@ -38,7 +53,7 @@ func (h *AuthHandler) RegisterNormal(c *gin.Context) {
 
 	if err != nil {
 		logger.Error("handler: failed to bind request body", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "incorrect request body"})
 		return
 	}
 
@@ -68,19 +83,24 @@ func (h *AuthHandler) RegisterNormal(c *gin.Context) {
 		return
 	}
 
-	jwt, err := utils.GetJWT(user.ID, user.Email, user.Role)
+	otp, err := h.service.CreateOTP(c.Request.Context(), user.Email, time.Minute*10)
 
 	if err != nil {
-		logger.Error("handler: failed to generate JWT", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		logger.Error("handler: failed to create OTP", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{
-		"jwt": jwt,
-		"msg": "User created successfully",
+	go func(email, otp string) {
+		err := h.emailClient.SendVerificationEmail(email, otp)
+		if err != nil {
+			logger.Error("handler: failed to send verification email", zap.Error(err))
+		}
+	}(user.Email, otp)
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "registered successfully, please verify email now",
 	})
-	logger.Info("handler: successfully registered user", zap.String("id", user.ID))
 }
 
 func (h *AuthHandler) RegisterOAUTH(c *gin.Context) {}
@@ -111,38 +131,17 @@ func (h *AuthHandler) Login(c *gin.Context) {
 			return
 		}
 
+		if strings.Contains(errorString, "service: user is not verified") {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "please verify email"})
+			return
+		}
+
 		logger.Error("handler: failed to login", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	jwt, err := utils.GetJWT(userInfo.ID, userInfo.Email, userInfo.Role)
-
-	if err != nil {
-		logger.Error("handler: failed to generate JWT", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
-		return
-	}
-
-	refreshToken, hashedRefreshToken, familyId, err := utils.GetRefreshTokenString()
-	if err != nil {
-		logger.Error("handler: failed to generate refresh token", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
-		return
-	}
-
-	_, err = h.service.SaveRefreshToken(c.Request.Context(), userInfo.ID, hashedRefreshToken, familyId)
-	if err != nil {
-		logger.Error("handler: failed to save refresh token", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
-		return
-	}
-
-	c.SetCookie("refreshToken", refreshToken, 60*60*24*7, "/", "", false, true)
-	c.JSON(http.StatusOK, gin.H{
-		"jwt": jwt,
-		"msg": "User logged in",
-	})
+	h.issueTokensAndRespond(c, userInfo.ID, userInfo.Email, userInfo.Role, "User logged in", http.StatusOK)
 }
 
 func (h *AuthHandler) Refresh(c *gin.Context) {
@@ -201,4 +200,96 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 
 	c.SetCookie("refreshToken", "", -1, "/", "", false, true)
 	c.JSON(http.StatusOK, gin.H{"msg": "logout successful"})
+}
+
+func (h *AuthHandler) Verify(c *gin.Context) {
+	var request VerifyRequest
+	err := c.ShouldBindJSON(&request)
+	if err != nil {
+		logger.Error("handler: failed to bind request body", zap.Error(err))
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	user, err := h.service.VerifyEmail(c.Request.Context(), request.Email, request.OTP)
+	if err != nil {
+		if strings.Contains(err.Error(), "service: failed to delete OTP from OTP repository") {
+			logger.Error("handler: failed to delete OTP from OTP repository", zap.Error(err))
+		} else {
+			logger.Error("handler: failed to verify OTP from OTP repository", zap.Error(err))
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			return
+		}
+	}
+
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid OTP"})
+		return
+	}
+
+	h.issueTokensAndRespond(c, user.ID, user.Email, user.Role, "User logged in", http.StatusOK)
+	logger.Info("handler: successfully registered user", zap.String("id", user.ID))
+}
+
+func (h *AuthHandler) ResendOTP(c *gin.Context) {
+	var requestData ResendOTPRequest
+
+	if err := c.ShouldBindJSON(&requestData); err != nil {
+		logger.Error("handler: failed to bind resend otp request body", zap.Error(err))
+		c.JSON(http.StatusBadRequest, gin.H{"error": "A valid email is required"})
+		return
+	}
+
+	otp, err := h.service.ResendOTP(c.Request.Context(), requestData.Email)
+	if err != nil {
+		logger.Error("handler: resend OTP blocked", zap.Error(err))
+		if strings.Contains(err.Error(), "user is already verified") {
+			c.JSON(http.StatusConflict, gin.H{"error": "This email is already verified. Please log in."})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"message": "If email is registered and unverified, a new OTP has been sent.",
+		})
+		return
+	}
+	go func(targetEmail, generatedOTP string) {
+		err := h.emailClient.SendVerificationEmail(targetEmail, generatedOTP)
+		if err != nil {
+			logger.Error("handler: failed to send resend verification email", zap.Error(err))
+		}
+	}(requestData.Email, otp)
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "If email is registered and unverified, a new OTP has been sent.",
+	})
+}
+
+func (h *AuthHandler) issueTokensAndRespond(c *gin.Context, userID, email, role, successMsg string, statusCode int) {
+	jwt, err := utils.GetJWT(userID, email, role)
+	if err != nil {
+		logger.Error("handler: failed to generate JWT", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		return
+	}
+
+	refreshToken, hashedRefreshToken, familyId, err := utils.GetRefreshTokenString()
+	if err != nil {
+		logger.Error("handler: failed to generate refresh token", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		return
+	}
+
+	_, err = h.service.SaveRefreshToken(c.Request.Context(), userID, hashedRefreshToken, familyId)
+	if err != nil {
+		logger.Error("handler: failed to save refresh token", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		return
+	}
+
+	c.SetCookie("refreshToken", refreshToken, 60*60*24*7, "/", "", false, true)
+
+	c.JSON(statusCode, gin.H{
+		"jwt": jwt,
+		"msg": successMsg,
+	})
 }

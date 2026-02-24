@@ -7,6 +7,7 @@ import (
 	"ecommerce/services/auth/internal/utils"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/sixafter/nanoid"
@@ -19,11 +20,84 @@ type AuthService interface {
 	RotateRefreshToken(ctx context.Context, refreshToken string) (string, *domain.User, error)
 	Logout(ctx context.Context, refreshToken string) error
 	SaveRefreshToken(ctx context.Context, userID, hashedRefreshToken, familyId string) (*domain.Token, error)
+	VerifyEmail(ctx context.Context, email string, otp string) (*domain.User, error)
+	CreateOTP(ctx context.Context, email string, ttl time.Duration) (string, error)
+	ResendOTP(ctx context.Context, email string) (string, error)
 }
 
 type authService struct {
 	userRepo  repository.UserRepository
 	tokenRepo repository.TokenRepository
+	otpRepo   repository.OTPRepository
+}
+
+func (a *authService) ResendOTP(ctx context.Context, email string) (string, error) {
+	user, err := a.userRepo.GetUserByEmail(ctx, email)
+	if err != nil {
+		return "", fmt.Errorf("service: could not get user by email : %w", err)
+	}
+
+	if user == nil {
+		return "", errors.New("service: user not found")
+	}
+
+	if user.IsVerified {
+		return "", errors.New("service: user is already verified")
+	}
+
+	otp, err := a.CreateOTP(ctx, email, time.Minute*10)
+	if err != nil {
+		return "", fmt.Errorf("service: failed to create new OTP: %w", err)
+	}
+
+	return otp, nil
+}
+
+func (a *authService) CreateOTP(ctx context.Context, email string, ttl time.Duration) (string, error) {
+	otp, err := utils.GetOTP()
+
+	if err != nil {
+		return "", err
+	}
+
+	err = a.otpRepo.Create(ctx, otp, email, ttl)
+	if err != nil {
+		return "", fmt.Errorf("service: failed to write OTP into redis: %w", err)
+	}
+
+	return otp, nil
+}
+
+func (a *authService) VerifyEmail(ctx context.Context, email string, otp string) (*domain.User, error) {
+	dbOTP, err := a.otpRepo.Get(ctx, email)
+
+	if err != nil {
+		if strings.Contains(err.Error(), "repository: otp not found") {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("service: failed to get OTP from OTP repository %w", err)
+	}
+
+	if dbOTP != otp {
+		return nil, nil
+	}
+
+	user, err := a.userRepo.GetUserByEmail(ctx, email)
+	if err != nil {
+		return nil, fmt.Errorf("service: failed to get user by email %w", err)
+	}
+
+	err = a.userRepo.UpdateVerified(ctx, user.ID)
+	if err != nil {
+		return nil, fmt.Errorf("service: failed to update user by email %w", err)
+	}
+
+	err = a.otpRepo.Delete(ctx, email)
+	if err != nil {
+		return nil, fmt.Errorf("service: failed to delete OTP from OTP repository %w", err)
+	}
+
+	return user, nil
 }
 
 func (a *authService) Logout(ctx context.Context, refreshToken string) error {
@@ -44,8 +118,8 @@ func (a *authService) Logout(ctx context.Context, refreshToken string) error {
 	return nil
 }
 
-func NewAuthService(userRepo repository.UserRepository, tokenRepo repository.TokenRepository) AuthService {
-	return &authService{userRepo: userRepo, tokenRepo: tokenRepo}
+func NewAuthService(userRepo repository.UserRepository, tokenRepo repository.TokenRepository, otpRepo repository.OTPRepository) AuthService {
+	return &authService{userRepo: userRepo, tokenRepo: tokenRepo, otpRepo: otpRepo}
 }
 
 func (a *authService) Register(ctx context.Context, name, email, password, role, provider, providerId string) (*domain.User, error) {
@@ -85,6 +159,10 @@ func (a *authService) Login(ctx context.Context, email, password string) (*domai
 		return nil, errors.New("service: email does not exist")
 	}
 
+	if !res.IsVerified {
+		return nil, errors.New("service: user is not verified")
+	}
+	
 	err = bcrypt.CompareHashAndPassword([]byte(res.Password), []byte(password))
 
 	if err != nil {
