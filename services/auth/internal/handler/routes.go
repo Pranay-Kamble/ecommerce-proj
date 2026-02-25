@@ -14,5 +14,7 @@ func RegisterRoutes(router *gin.Engine, authHandler AuthHandler) {
 		v1.POST("/logout", authHandler.Logout)
 		v1.POST("/verify", authHandler.Verify)
 		v1.POST("/resend-otp", authHandler.ResendOTP)
+		v1.GET("/google/login", authHandler.GoogleLogin)
+		v1.GET("/google/callback", authHandler.GoogleCallback)
 	}
 }

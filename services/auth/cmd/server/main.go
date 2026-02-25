@@ -83,6 +83,11 @@ func main() {
 	emailClient := client.NewEmailClient(emailBaseURL)
 	authHandler := handler.NewAuthHandler(authService, emailClient)
 
+	err = utils.InitOAuth()
+	if err != nil {
+		logger.Fatal("main: failed to init OAuth", zap.Error(err))
+	}
+
 	r := gin.Default()
 	handler.RegisterRoutes(r, authHandler)
 
