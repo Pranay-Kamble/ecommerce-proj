@@ -5,12 +5,15 @@ import (
 	"ecommerce/services/auth/internal/client"
 	"ecommerce/services/auth/internal/service"
 	"ecommerce/services/auth/internal/utils"
+	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sixafter/nanoid"
 	"go.uber.org/zap"
 )
 
@@ -37,6 +40,12 @@ type AuthHandler struct {
 
 type ResendOTPRequest struct {
 	Email string `json:"email" binding:"required,email"`
+}
+
+type OAuthProfile struct {
+	ID    string `json:"id"`
+	Email string `json:"email"`
+	Name  string `json:"name"`
 }
 
 func NewAuthHandler(service service.AuthService, emailClient client.EmailClient) AuthHandler {
@@ -292,4 +301,68 @@ func (h *AuthHandler) issueTokensAndRespond(c *gin.Context, userID, email, role,
 		"jwt": jwt,
 		"msg": successMsg,
 	})
+}
+
+func (h *AuthHandler) GoogleLogin(c *gin.Context) {
+	state := utils.HashUsingSHA256(nanoid.ID(time.Now().String()))
+	c.SetCookie("oauthstate", state, 60*5, "/", "", false, true)
+
+	oauthURL := utils.OAuth.AuthCodeURL(state)
+	c.Redirect(http.StatusTemporaryRedirect, oauthURL)
+}
+
+func (h *AuthHandler) GoogleCallback(c *gin.Context) {
+	oauthstate := c.Request.URL.Query().Get("state")
+
+	browserOauthstate, err := c.Cookie("oauthstate")
+
+	if errors.Is(err, http.ErrNoCookie) || oauthstate == "" || oauthstate != browserOauthstate {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid state or cookie missing"})
+		return
+	}
+
+	authorizationCode := c.Request.URL.Query().Get("code")
+	if authorizationCode == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "authorization code is required"})
+		return
+	}
+
+	token, err := utils.OAuth.Exchange(c.Request.Context(), authorizationCode)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid authorization code"})
+		return
+	}
+
+	oauthClient := utils.OAuth.Client(c.Request.Context(), token)
+	response, err := oauthClient.Get("https://www.googleapis.com/oauth2/v2/userinfo")
+
+	if err != nil {
+		logger.Error("handler: failed to get user info from Google APIs: ", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		return
+	}
+
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			logger.Error("handler: failed to close response body cleanly: ", zap.Error(err))
+		}
+	}(response.Body)
+
+	bodyBytes, err := io.ReadAll(response.Body)
+
+	var profile OAuthProfile
+	if err := json.Unmarshal(bodyBytes, &profile); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to parse google response"})
+		return
+	}
+
+	user, err := h.service.OAuthLogin(c.Request.Context(), profile.Email, profile.ID, profile.Name)
+	if err != nil {
+		logger.Error("handler: failed to complete OAuth Login/Register: ", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		return
+	}
+
+	h.issueTokensAndRespond(c, user.ID, user.Email, user.Role, "User logged in", http.StatusCreated)
 }
