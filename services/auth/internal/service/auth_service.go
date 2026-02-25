@@ -23,6 +23,7 @@ type AuthService interface {
 	VerifyEmail(ctx context.Context, email string, otp string) (*domain.User, error)
 	CreateOTP(ctx context.Context, email string, ttl time.Duration) (string, error)
 	ResendOTP(ctx context.Context, email string) (string, error)
+	OAuthLogin(ctx context.Context, email string, providerID string, name string) (*domain.User, error)
 }
 
 type authService struct {
@@ -162,7 +163,7 @@ func (a *authService) Login(ctx context.Context, email, password string) (*domai
 	if !res.IsVerified {
 		return nil, errors.New("service: user is not verified")
 	}
-	
+
 	err = bcrypt.CompareHashAndPassword([]byte(res.Password), []byte(password))
 
 	if err != nil {
@@ -233,4 +234,27 @@ func (a *authService) RotateRefreshToken(ctx context.Context, refreshToken strin
 	}
 
 	return newTokenString, tokenUser, nil
+}
+
+func (a *authService) OAuthLogin(ctx context.Context, email string, providerID string, name string) (*domain.User, error) {
+	res, err := a.userRepo.GetUserByEmail(ctx, email)
+	if err != nil {
+		return nil, fmt.Errorf("service: failed to check email existence: %w", err)
+	}
+
+	if res == nil {
+		res, err = a.Register(ctx, name, email, "", "buyer", "google", providerID)
+		if err != nil {
+			return nil, fmt.Errorf("service: failed to register OAuth user: %w", err)
+		}
+	}
+
+	if !res.IsVerified {
+		err = a.userRepo.UpdateVerified(ctx, res.ID)
+		if err != nil {
+			return nil, fmt.Errorf("service: failed to update verified user: %w", err)
+		}
+	}
+
+	return res, nil
 }
