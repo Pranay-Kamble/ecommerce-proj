@@ -17,6 +17,17 @@ import (
 	"go.uber.org/zap"
 )
 
+// @title           E-Commerce Auth Microservice API
+// @version         1.0
+// @description     Authentication, Session Management, and OAuth 2.0 service.
+// @termsOfService  http://swagger.io/terms/
+
+// @contact.name   Pranay Kamble
+// @contact.email  iampranaykamble1@gmail.com
+
+// @host      localhost:8080
+// @BasePath  /api/v1/auth
+
 func main() {
 	err := godotenv.Load(".env")
 	if err != nil {

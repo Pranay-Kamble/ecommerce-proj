@@ -1,0 +1,326 @@
+basePath: /api/v1/auth
+definitions:
+  handler.LoginRequest:
+    properties:
+      email:
+        example: john@example.com
+        type: string
+      password:
+        example: SecurePass123!
+        minLength: 8
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  handler.RegisterRequest:
+    properties:
+      email:
+        example: john@example.com
+        type: string
+      name:
+        example: Pranay Kamble
+        type: string
+      password:
+        example: SecurePass123!
+        minLength: 8
+        type: string
+      role:
+        example: buyer
+        type: string
+    required:
+    - email
+    - name
+    - password
+    - role
+    type: object
+  handler.ResendOTPRequest:
+    properties:
+      email:
+        example: john@example.com
+        type: string
+    required:
+    - email
+    type: object
+  handler.VerifyRequest:
+    properties:
+      email:
+        example: john@example.com
+        type: string
+      otp:
+        example: "123456"
+        type: string
+    required:
+    - email
+    - otp
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: iampranaykamble1@gmail.com
+    name: Pranay Kamble
+  description: Authentication, Session Management, and OAuth 2.0 service.
+  termsOfService: http://swagger.io/terms/
+  title: E-Commerce Auth Microservice API
+  version: "1.0"
+paths:
+  /google/callback:
+    get:
+      description: Handles the redirect from Google, exchanges the code for a profile,
+        and issues login tokens.
+      parameters:
+      - description: CSRF State Token
+        in: query
+        name: state
+        required: true
+        type: string
+      - description: Authorization Code
+        in: query
+        name: code
+        required: true
+        type: string
+      responses:
+        "201":
+          description: JWT and success message
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid state, cookie, or authorization code
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error during exchange or parsing
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Google OAuth Callback
+      tags:
+      - OAuth 2.0
+  /google/login:
+    get:
+      description: Redirects the user to the Google Consent screen. Cannot be tested
+        directly in Swagger UI due to CORS/Redirects.
+      responses:
+        "307":
+          description: Redirects to accounts.google.com
+      summary: Initiate Google OAuth
+      tags:
+      - OAuth 2.0
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: Validates credentials and returns a JWT in the JSON body and a
+        Refresh Token in an HttpOnly cookie.
+      parameters:
+      - description: User Login Credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: JWT and success message
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Invalid email/password or unverified email
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Login an existing user
+      tags:
+      - Authentication
+  /logout:
+    post:
+      description: Revokes the refresh token in the database and clears the HttpOnly
+        cookie.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: logout successful
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Logout a user
+      tags:
+      - Session Management
+  /ping:
+    get:
+      description: Use this to check if server is active and running.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: pong
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Health check the server
+      tags:
+      - System
+  /refresh:
+    post:
+      description: Rotates the refresh token securely. Requires the 'refreshToken'
+        HttpOnly cookie to be present.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: New JWT and message
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid or missing refresh token cookie
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Token expired, revoked, or theft detected
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Refresh Access Token
+      tags:
+      - Session Management
+  /register:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new user account (buyer, seller, or logistic) and triggers
+        an async email verification OTP.
+      parameters:
+      - description: User Registration Details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: registered successfully, please verify email now
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: incorrect request body or invalid role
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: email already exists
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Register a new user
+      tags:
+      - Authentication
+  /resend-otp:
+    post:
+      consumes:
+      - application/json
+      description: Generates and emails a new 6-digit OTP if the user exists and is
+        unverified.
+      parameters:
+      - description: Email address
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.ResendOTPRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OTP sent message
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: A valid email is required
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Email already verified
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Resend Verification OTP
+      tags:
+      - Authentication
+  /verify:
+    post:
+      consumes:
+      - application/json
+      description: Verifies the 6-digit OTP sent to the user's email and issues login
+        tokens upon success.
+      parameters:
+      - description: Email and OTP
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.VerifyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: JWT and success message
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Invalid OTP
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Verify Email OTP
+      tags:
+      - Authentication
+swagger: "2.0"
