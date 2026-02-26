@@ -2,9 +2,17 @@ package handler
 
 import (
 	"github.com/gin-gonic/gin"
+
+	_ "ecommerce/services/auth/docs"
+
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func RegisterRoutes(router *gin.Engine, authHandler AuthHandler) {
+
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
 	v1 := router.Group("/api/v1/auth/")
 	{
 		v1.POST("/register", authHandler.RegisterNormal)
