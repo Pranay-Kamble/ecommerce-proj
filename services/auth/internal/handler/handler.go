@@ -18,28 +18,29 @@ import (
 )
 
 type RegisterRequest struct {
-	Name     string `json:"name" binding:"required"`
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required,min=8"`
-	Role     string `json:"role" binding:"required"`
+	Name     string `json:"name" binding:"required" example:"Pranay Kamble"`
+	Email    string `json:"email" binding:"required,email" example:"john@example.com"`
+	Password string `json:"password" binding:"required,min=8" example:"SecurePass123!"`
+	Role     string `json:"role" binding:"required" example:"buyer"`
 }
 
 type LoginRequest struct {
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required,min=8"`
+	Email    string `json:"email" binding:"required,email" example:"john@example.com"`
+	Password string `json:"password" binding:"required,min=8" example:"SecurePass123!"`
 }
 
 type VerifyRequest struct {
-	Email string `json:"email" binding:"required,email"`
-	OTP   string `json:"otp" binding:"required,len=6,numeric"`
+	Email string `json:"email" binding:"required,email" example:"john@example.com"`
+	OTP   string `json:"otp" binding:"required,len=6,numeric" example:"123456"`
 }
+
 type AuthHandler struct {
 	service     service.AuthService
 	emailClient client.EmailClient
 }
 
 type ResendOTPRequest struct {
-	Email string `json:"email" binding:"required,email"`
+	Email string `json:"email" binding:"required,email" example:"john@example.com"`
 }
 
 type OAuthProfile struct {
@@ -55,8 +56,19 @@ func NewAuthHandler(service service.AuthService, emailClient client.EmailClient)
 	}
 }
 
+// RegisterNormal godoc
+// @Summary      Register a new user
+// @Description  Creates a new user account (buyer, seller, or logistic) and triggers an async email verification OTP.
+// @Tags         Authentication
+// @Accept       json
+// @Produce      json
+// @Param        request  body      RegisterRequest  true  "User Registration Details"
+// @Success      200      {object}  map[string]interface{} "registered successfully, please verify email now"
+// @Failure      400      {object}  map[string]interface{} "incorrect request body or invalid role"
+// @Failure      409      {object}  map[string]interface{} "email already exists"
+// @Failure      500      {object}  map[string]interface{} "internal server error"
+// @Router       /register [post]
 func (h *AuthHandler) RegisterNormal(c *gin.Context) {
-
 	var requestData RegisterRequest
 	err := c.ShouldBindJSON(&requestData)
 
@@ -93,7 +105,6 @@ func (h *AuthHandler) RegisterNormal(c *gin.Context) {
 	}
 
 	otp, err := h.service.CreateOTP(c.Request.Context(), user.Email, time.Minute*10)
-
 	if err != nil {
 		logger.Error("handler: failed to create OTP", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -107,17 +118,32 @@ func (h *AuthHandler) RegisterNormal(c *gin.Context) {
 		}
 	}(user.Email, otp)
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "registered successfully, please verify email now",
-	})
+	c.JSON(http.StatusOK, gin.H{"message": "registered successfully, please verify email now"})
 }
 
-func (h *AuthHandler) RegisterOAUTH(c *gin.Context) {}
-
+// GetPing godoc
+// @Summary      Health check the server
+// @Description  Use this to check if server is active and running.
+// @Tags         System
+// @Produce      json
+// @Success      200      {object}  map[string]interface{} "pong"
+// @Router       /ping [get]
 func (h *AuthHandler) GetPing(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"msg": "pong"})
 }
 
+// Login godoc
+// @Summary      Login an existing user
+// @Description  Validates credentials and returns a JWT in the JSON body and a Refresh Token in an HttpOnly cookie.
+// @Tags         Authentication
+// @Accept       json
+// @Produce      json
+// @Param        request  body      LoginRequest  true  "User Login Credentials"
+// @Success      200      {object}  map[string]interface{} "JWT and success message"
+// @Failure      400      {object}  map[string]interface{} "Invalid request body"
+// @Failure      401      {object}  map[string]interface{} "Invalid email/password or unverified email"
+// @Failure      500      {object}  map[string]interface{} "Internal server error"
+// @Router       /login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	var request LoginRequest
 	err := c.ShouldBindJSON(&request)
@@ -132,19 +158,15 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	userInfo, err := h.service.Login(c.Request.Context(), email, password)
 	if err != nil {
-
 		errorString := err.Error()
-
 		if strings.Contains(errorString, "service: email does not exist") || strings.Contains(errorString, "service: invalid password") {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid email or password"})
 			return
 		}
-
 		if strings.Contains(errorString, "service: user is not verified") {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "please verify email"})
 			return
 		}
-
 		logger.Error("handler: failed to login", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -153,6 +175,16 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	h.issueTokensAndRespond(c, userInfo.ID, userInfo.Email, userInfo.Role, "User logged in", http.StatusOK)
 }
 
+// Refresh godoc
+// @Summary      Refresh Access Token
+// @Description  Rotates the refresh token securely. Requires the 'refreshToken' HttpOnly cookie to be present.
+// @Tags         Session Management
+// @Produce      json
+// @Success      200      {object}  map[string]interface{} "New JWT and message"
+// @Failure      400      {object}  map[string]interface{} "Invalid or missing refresh token cookie"
+// @Failure      401      {object}  map[string]interface{} "Token expired, revoked, or theft detected"
+// @Failure      500      {object}  map[string]interface{} "Internal server error"
+// @Router       /refresh [post]
 func (h *AuthHandler) Refresh(c *gin.Context) {
 	refreshToken, err := c.Cookie("refreshToken")
 
@@ -189,6 +221,14 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"msg": "refresh successful", "jwt": jwt})
 }
 
+// Logout godoc
+// @Summary      Logout a user
+// @Description  Revokes the refresh token in the database and clears the HttpOnly cookie.
+// @Tags         Session Management
+// @Produce      json
+// @Success      200      {object}  map[string]interface{} "logout successful"
+// @Failure      500      {object}  map[string]interface{} "Internal server error"
+// @Router       /logout [post]
 func (h *AuthHandler) Logout(c *gin.Context) {
 	refreshToken, err := c.Cookie("refreshToken")
 
@@ -211,6 +251,18 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"msg": "logout successful"})
 }
 
+// Verify godoc
+// @Summary      Verify Email OTP
+// @Description  Verifies the 6-digit OTP sent to the user's email and issues login tokens upon success.
+// @Tags         Authentication
+// @Accept       json
+// @Produce      json
+// @Param        request  body      VerifyRequest  true  "Email and OTP"
+// @Success      200      {object}  map[string]interface{} "JWT and success message"
+// @Failure      400      {object}  map[string]interface{} "Invalid request body"
+// @Failure      401      {object}  map[string]interface{} "Invalid OTP"
+// @Failure      500      {object}  map[string]interface{} "Internal server error"
+// @Router       /verify [post]
 func (h *AuthHandler) Verify(c *gin.Context) {
 	var request VerifyRequest
 	err := c.ShouldBindJSON(&request)
@@ -240,6 +292,17 @@ func (h *AuthHandler) Verify(c *gin.Context) {
 	logger.Info("handler: successfully registered user", zap.String("id", user.ID))
 }
 
+// ResendOTP godoc
+// @Summary      Resend Verification OTP
+// @Description  Generates and emails a new 6-digit OTP if the user exists and is unverified.
+// @Tags         Authentication
+// @Accept       json
+// @Produce      json
+// @Param        request  body      ResendOTPRequest  true  "Email address"
+// @Success      200      {object}  map[string]interface{} "OTP sent message"
+// @Failure      400      {object}  map[string]interface{} "A valid email is required"
+// @Failure      409      {object}  map[string]interface{} "Email already verified"
+// @Router       /resend-otp [post]
 func (h *AuthHandler) ResendOTP(c *gin.Context) {
 	var requestData ResendOTPRequest
 
@@ -273,6 +336,7 @@ func (h *AuthHandler) ResendOTP(c *gin.Context) {
 	})
 }
 
+// issueTokensAndRespond is an internal helper, so it does NOT get Swagger annotations.
 func (h *AuthHandler) issueTokensAndRespond(c *gin.Context, userID, email, role, successMsg string, statusCode int) {
 	jwt, err := utils.GetJWT(userID, email, role)
 	if err != nil {
@@ -303,6 +367,12 @@ func (h *AuthHandler) issueTokensAndRespond(c *gin.Context, userID, email, role,
 	})
 }
 
+// GoogleLogin godoc
+// @Summary      Initiate Google OAuth
+// @Description  Redirects the user to the Google Consent screen. Cannot be tested directly in Swagger UI due to CORS/Redirects.
+// @Tags         OAuth 2.0
+// @Success      307  "Redirects to accounts.google.com"
+// @Router       /google/login [get]
 func (h *AuthHandler) GoogleLogin(c *gin.Context) {
 	state := utils.HashUsingSHA256(nanoid.ID(time.Now().String()))
 	c.SetCookie("oauthstate", state, 60*5, "/", "", false, true)
@@ -311,6 +381,16 @@ func (h *AuthHandler) GoogleLogin(c *gin.Context) {
 	c.Redirect(http.StatusTemporaryRedirect, oauthURL)
 }
 
+// GoogleCallback godoc
+// @Summary      Google OAuth Callback
+// @Description  Handles the redirect from Google, exchanges the code for a profile, and issues login tokens.
+// @Tags         OAuth 2.0
+// @Param        state query string true "CSRF State Token"
+// @Param        code  query string true "Authorization Code"
+// @Success      201  {object}  map[string]interface{} "JWT and success message"
+// @Failure      400  {object}  map[string]interface{} "Invalid state, cookie, or authorization code"
+// @Failure      500  {object}  map[string]interface{} "Internal server error during exchange or parsing"
+// @Router       /google/callback [get]
 func (h *AuthHandler) GoogleCallback(c *gin.Context) {
 	oauthstate := c.Request.URL.Query().Get("state")
 

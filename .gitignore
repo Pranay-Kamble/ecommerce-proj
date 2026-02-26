@@ -36,3 +36,6 @@ postgres_data/
 redis_data/
 rabbitmq_data/
 minio_data/
+
+#Miscellaneous
+Interview Notes/
