@@ -23,6 +23,9 @@ type Product struct {
 	CreatedAt time.Time      `gorm:"precision:6" json:"createdAt"`
 	UpdatedAt time.Time      `gorm:"precision:6" json:"updatedAt"`
 	DeletedAt gorm.DeletedAt `gorm:"precision:6" json:"deletedAt"`
+
+	Seller   Seller   `gorm:"foreignKey:SellerID;references:ID" json:"seller,omitempty"`
+	Category Category `gorm:"foreignKey:CategoryID;references:ID" json:"category,omitempty"`
 }
 
 type Category struct {
