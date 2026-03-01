@@ -2,6 +2,7 @@ package domain
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -25,6 +26,7 @@ type Product struct {
 	Description string                 `gorm:"type:text" json:"description"`
 	Highlights  []string               `gorm:"type:jsonb;serializer:json" json:"highlights"`
 	Dimensions  map[string]interface{} `gorm:"type:jsonb;serializer:json" json:"dimensions"`
+	Slug        string                 `gorm:"type:varchar(50)" json:"slug"`
 
 	Variants []ProductVariant `gorm:"foreignKey:ProductID;references:ID" json:"variants"`
 	Images   []Image          `gorm:"type:jsonb;serializer:json" json:"images"`
@@ -70,7 +72,6 @@ type Seller struct {
 	PublicID string    `gorm:"type:varchar(25);uniqueIndex" json:"id"`
 	UserID   string    `gorm:"type:varchar(21);uniqueIndex" json:"userId"`
 	Name     string    `gorm:"type:varchar(50);" json:"name"`
-	Slug     string    `gorm:"type:varchar(50)" json:"slug"`
 
 	CreatedAt time.Time      `gorm:"precision:6" json:"createdAt"`
 	UpdatedAt time.Time      `gorm:"precision:6" json:"updatedAt"`
@@ -95,7 +96,18 @@ func (p *Product) BeforeCreate(tx *gorm.DB) error {
 		p.PublicID = publicIDStr
 	}
 
+	p.Slug = generateSlug(p.Title)
+
 	return nil
+}
+
+func (p *Product) BeforeUpdate(tx *gorm.DB) error {
+	p.Slug = generateSlug(p.Title)
+	return nil
+}
+
+func generateSlug(title string) string {
+	return strings.ToLower(strings.ReplaceAll(title, " ", "-"))
 }
 
 func (s *Seller) BeforeCreate(tx *gorm.DB) error {
