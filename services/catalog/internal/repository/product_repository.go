@@ -36,7 +36,11 @@ func (p *productRepository) Create(ctx context.Context, product *domain.Product)
 }
 
 func (p *productRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Product, error) {
-	product, err := gorm.G[*domain.Product](p.db).Preload("Category", nil).Preload("Seller", nil).Where("id = ?", id).Take(ctx)
+	product, err := gorm.G[*domain.Product](p.db).
+		Preload("Category", nil).
+		Preload("Seller", nil).
+		Preload("Variants", nil).
+		Where("id = ?", id).Take(ctx)
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	} else if err != nil {
@@ -46,7 +50,11 @@ func (p *productRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.
 }
 
 func (p *productRepository) GetByPublicID(ctx context.Context, publicID string) (*domain.Product, error) {
-	product, err := gorm.G[*domain.Product](p.db).Preload("Category", nil).Preload("Seller", nil).Where("public_id = ?", publicID).Take(ctx)
+	product, err := gorm.G[*domain.Product](p.db).
+		Preload("Category", nil).
+		Preload("Seller", nil).
+		Preload("Variants", nil).
+		Where("public_id = ?", publicID).Take(ctx)
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	} else if err != nil {
@@ -56,7 +64,12 @@ func (p *productRepository) GetByPublicID(ctx context.Context, publicID string) 
 }
 
 func (p *productRepository) GetBySellerID(ctx context.Context, sellerID uuid.UUID, limit, offset int) ([]*domain.Product, error) {
-	products, err := gorm.G[*domain.Product](p.db).Preload("Category", nil).Preload("Seller", nil).Where("seller_id = ? ", sellerID).Limit(limit).Offset(offset).Find(ctx)
+	products, err := gorm.G[*domain.Product](p.db).
+		Preload("Category", nil).
+		Preload("Seller", nil).
+		Preload("Variants", nil).
+		Where("seller_id = ? ", sellerID).
+		Limit(limit).Offset(offset).Find(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("repository: failed to get products by seller ID: %w", err)
 	}
@@ -64,7 +77,11 @@ func (p *productRepository) GetBySellerID(ctx context.Context, sellerID uuid.UUI
 }
 
 func (p *productRepository) GetBySlug(ctx context.Context, slug string) (*domain.Product, error) {
-	product, err := gorm.G[*domain.Product](p.db).Preload("Category", nil).Preload("Seller", nil).Where("slug = ?", slug).Take(ctx)
+	product, err := gorm.G[*domain.Product](p.db).
+		Preload("Category", nil).
+		Preload("Seller", nil).
+		Preload("Variants", nil).
+		Where("slug = ?", slug).Take(ctx)
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	} else if err != nil {
@@ -74,7 +91,12 @@ func (p *productRepository) GetBySlug(ctx context.Context, slug string) (*domain
 }
 
 func (p *productRepository) GetByCategoryID(ctx context.Context, categoryID uuid.UUID, limit, offset int) ([]*domain.Product, error) {
-	products, err := gorm.G[*domain.Product](p.db).Preload("Category", nil).Preload("Seller", nil).Where("category_id = ?", categoryID).Limit(limit).Offset(offset).Find(ctx)
+	products, err := gorm.G[*domain.Product](p.db).
+		Preload("Category", nil).
+		Preload("Seller", nil).
+		Preload("Variants", nil).
+		Where("category_id = ?", categoryID).
+		Limit(limit).Offset(offset).Find(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("repository: failed to get products by category ID: %w", err)
 	}
