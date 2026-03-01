@@ -17,10 +17,30 @@ type ProductRepository interface {
 	GetBySellerID(ctx context.Context, sellerID uuid.UUID, limit, offset int) ([]*domain.Product, error)
 	GetBySlug(ctx context.Context, slug string) (*domain.Product, error)
 	GetByCategoryID(ctx context.Context, categoryID uuid.UUID, limit, offset int) ([]*domain.Product, error)
+
+	Delete(ctx context.Context, id uuid.UUID) error
+	Update(ctx context.Context, product *domain.Product) error
 }
 
 type productRepository struct {
 	db *gorm.DB
+}
+
+func (p *productRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	_, err := gorm.G[*domain.Product](p.db).Select("Variants").Where("id = ?", id).Delete(ctx)
+	if err != nil {
+		return fmt.Errorf("repository: failed to perform delete: %w", err)
+	}
+	return nil
+}
+
+func (p *productRepository) Update(ctx context.Context, product *domain.Product) error {
+	err := p.db.WithContext(ctx).Save(product).Error
+
+	if err != nil {
+		return fmt.Errorf("repository: failed to perform update: %w", err)
+	}
+	return nil
 }
 
 func NewProductRepository(db *gorm.DB) ProductRepository {
