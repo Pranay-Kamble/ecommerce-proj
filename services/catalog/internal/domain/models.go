@@ -62,8 +62,9 @@ type Category struct {
 	Name     string    `gorm:"type:varchar(50);uniqueIndex:idx_name" json:"name"`
 	Path     string    `gorm:"type:ltree;index:idx_path,class:gist,option:gist_ltree_ops" json:"path"`
 
-	ParentCategoryID *uuid.UUID `gorm:"type:uuid;index:idx_parent_id" json:"parentId,omitempty"`
-	Parent           *Category  `gorm:"foreignKey:ParentCategoryID" json:"parent,omitempty"`
+	ParentID *uuid.UUID `gorm:"type:uuid;index:idx_parent_id" json:"parentId,omitempty"`
+	Parent   *Category  `gorm:"foreignKey:ParentID" json:"parent,omitempty"`
+	Children []Category `gorm:"foreignKey:ParentID" json:"children,omitempty"`
 
 	CreatedAt time.Time      `gorm:"precision:6" json:"createdAt"`
 	UpdatedAt time.Time      `gorm:"precision:6" json:"updatedAt"`
