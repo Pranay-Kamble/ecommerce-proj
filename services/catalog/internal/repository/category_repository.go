@@ -17,6 +17,7 @@ type CategoryRepository interface {
 	GetByName(ctx context.Context, name string) (*domain.Category, error)
 	GetDescendants(ctx context.Context, id string) ([]*domain.Category, error)
 	GetAncestors(ctx context.Context, id string) ([]*domain.Category, error)
+	GetAllCategories(ctx context.Context, parentID *uuid.UUID) ([]*domain.Category, error)
 }
 
 type categoryRepo struct {
@@ -69,8 +70,8 @@ func (c *categoryRepo) GetByName(ctx context.Context, name string) (*domain.Cate
 	return category, nil
 }
 
-func (c *categoryRepo) GetDescendants(ctx context.Context, id string) ([]*domain.Category, error) {
-	categories, err := gorm.G[*domain.Category](c.db).Where(" path::ltree <@ (SELECT path FROM categories WHERE public_id = ?)", id).Find(ctx)
+func (c *categoryRepo) GetDescendants(ctx context.Context, publicId string) ([]*domain.Category, error) {
+	categories, err := gorm.G[*domain.Category](c.db).Where(" path::ltree <@ (SELECT path FROM categories WHERE public_id = ?)", publicId).Find(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("repository: could not get category descendants : %w", err)
 	}
@@ -78,11 +79,25 @@ func (c *categoryRepo) GetDescendants(ctx context.Context, id string) ([]*domain
 	return categories, nil
 }
 
-func (c *categoryRepo) GetAncestors(ctx context.Context, id string) ([]*domain.Category, error) {
-	categories, err := gorm.G[*domain.Category](c.db).Where(" path::ltree @> (SELECT path FROM categories WHERE public_id = ?)", id).Order("nlevel(path) ASC").Find(ctx)
+func (c *categoryRepo) GetAncestors(ctx context.Context, publicId string) ([]*domain.Category, error) {
+	categories, err := gorm.G[*domain.Category](c.db).Where(" path::ltree @> (SELECT path FROM categories WHERE public_id = ?)", publicId).Order("nlevel(path) ASC").Find(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("repository: could not get category ancestors : %w", err)
 	}
 
+	return categories, nil
+}
+
+func (c *categoryRepo) GetAllCategories(ctx context.Context, parentID *uuid.UUID) ([]*domain.Category, error) {
+	var categories []*domain.Category
+	var err error
+	if parentID == nil {
+		categories, err = gorm.G[*domain.Category](c.db).Where("parent_id IS NULL").Find(ctx)
+	} else {
+		categories, err = gorm.G[*domain.Category](c.db).Where("parent_id = ?", *parentID).Find(ctx)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("repository: could not get category all : %w", err)
+	}
 	return categories, nil
 }
