@@ -60,7 +60,10 @@ type Category struct {
 	ID       uuid.UUID `gorm:"primaryKey;type:uuid;" json:"-"`
 	PublicID string    `gorm:"type:varchar(25);uniqueIndex:idx_public_id" json:"id"`
 	Name     string    `gorm:"type:varchar(50);uniqueIndex:idx_name" json:"name"`
-	Path     string    `gorm:"type:ltree;uniqueIndex:idx_path" json:"path"`
+	Path     string    `gorm:"type:ltree;index:idx_path,class:gist,option:gist_ltree_ops" json:"path"`
+
+	ParentCategoryID *uuid.UUID `gorm:"type:uuid;index:idx_parent_id" json:"parentId,omitempty"`
+	Parent           *Category  `gorm:"foreignKey:ParentCategoryID" json:"parent,omitempty"`
 
 	CreatedAt time.Time      `gorm:"precision:6" json:"createdAt"`
 	UpdatedAt time.Time      `gorm:"precision:6" json:"updatedAt"`
