@@ -28,7 +28,7 @@ func NewCategoryRepo(db *gorm.DB) CategoryRepository {
 }
 
 func (c *categoryRepo) Create(ctx context.Context, category *domain.Category) error {
-	err := gorm.G[domain.Category](c.db).Create(ctx, category)
+	err := gorm.G[*domain.Category](c.db).Create(ctx, &category)
 	if err != nil {
 		return fmt.Errorf("repository: could not create category %w", err)
 	}
@@ -72,16 +72,16 @@ func (c *categoryRepo) GetByName(ctx context.Context, name string) (*domain.Cate
 func (c *categoryRepo) GetDescendants(ctx context.Context, id string) ([]*domain.Category, error) {
 	categories, err := gorm.G[*domain.Category](c.db).Where(" path::ltree <@ (SELECT path FROM categories WHERE public_id = ?)", id).Find(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("repository: could not get category descendants %w", err)
+		return nil, fmt.Errorf("repository: could not get category descendants : %w", err)
 	}
 
 	return categories, nil
 }
 
 func (c *categoryRepo) GetAncestors(ctx context.Context, id string) ([]*domain.Category, error) {
-	categories, err := gorm.G[*domain.Category](c.db).Where(" path::ltree @> (SELECT path FROM categories WHERE public_id = ?)", id).Order("path ASC").Find(ctx)
+	categories, err := gorm.G[*domain.Category](c.db).Where(" path::ltree @> (SELECT path FROM categories WHERE public_id = ?)", id).Order("nlevel(path) ASC").Find(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("repository: could not get category ancestors %w", err)
+		return nil, fmt.Errorf("repository: could not get category ancestors : %w", err)
 	}
 
 	return categories, nil
