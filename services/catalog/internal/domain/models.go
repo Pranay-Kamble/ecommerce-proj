@@ -43,7 +43,8 @@ type ProductVariant struct {
 	ID        uuid.UUID `gorm:"primaryKey;type:uuid;" json:"-"`
 	ProductID uuid.UUID `gorm:"type:uuid;not null;index" json:"productId"`
 
-	SKU       string  `gorm:"type:varchar(100);not null" json:"sku"`
+	Title     string  `gorm:"type:varchar(500);not null" json:"title"`
+	SKU       string  `gorm:"type:varchar(100);not null;uniqueIndex" json:"sku"`
 	Price     float64 `gorm:"type:decimal(10,2);" json:"price"`
 	Inventory int     `gorm:"type:int;default:0" json:"inventory"`
 
