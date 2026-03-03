@@ -15,6 +15,7 @@ type SellerRepository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*domain.Seller, error)
 	GetByPublicID(ctx context.Context, publicID string) (*domain.Seller, error)
 	GetByUserID(ctx context.Context, userID string) (*domain.Seller, error)
+	GetByGSTIN(ctx context.Context, gstin string) (*domain.Seller, error)
 }
 
 type sellerRepository struct {
@@ -26,7 +27,7 @@ func NewSellerRepository(db *gorm.DB) SellerRepository {
 }
 
 func (s *sellerRepository) Create(ctx context.Context, seller *domain.Seller) error {
-	err := gorm.G[domain.Seller](s.db).Create(ctx, seller)
+	err := gorm.G[*domain.Seller](s.db).Create(ctx, &seller)
 	if err != nil {
 		return fmt.Errorf("repository: failed to create: %w", err)
 	}
@@ -64,5 +65,16 @@ func (s *sellerRepository) GetByUserID(ctx context.Context, userID string) (*dom
 		return nil, fmt.Errorf("repository: failed to get seller by user id: %w", err)
 	}
 
+	return seller, nil
+}
+
+func (s *sellerRepository) GetByGSTIN(ctx context.Context, gstin string) (*domain.Seller, error) {
+	seller, err := gorm.G[*domain.Seller](s.db).Where("gstin = ?", gstin).Take(ctx)
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("repository: failed to get seller by gstin: %w", err)
+	}
 	return seller, nil
 }

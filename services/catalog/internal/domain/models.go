@@ -75,7 +75,21 @@ type Seller struct {
 	ID       uuid.UUID `gorm:"primaryKey;type:uuid;" json:"-"`
 	PublicID string    `gorm:"type:varchar(25);uniqueIndex" json:"id"`
 	UserID   string    `gorm:"type:varchar(21);uniqueIndex" json:"userId"`
-	Name     string    `gorm:"type:varchar(50);" json:"name"`
+
+	Name        string `gorm:"type:varchar(50);not null" json:"name"`
+	Description string `gorm:"type:text" json:"description"`
+	LogoURL     string `gorm:"type:varchar(255)" json:"logoUrl"`
+
+	SupportEmail string `gorm:"type:varchar(100);not null" json:"supportEmail"`
+	SupportPhone string `gorm:"type:varchar(20)" json:"supportPhone"`
+
+	GSTIN             string `gorm:"type:varchar(15),index" json:"gstin"`
+	RegisteredAddress string `gorm:"type:text" json:"registeredAddress"`
+
+	Status     string `gorm:"type:varchar(20);default:'pending'" json:"status"`
+	IsVerified bool   `gorm:"type:boolean;default:false" json:"isVerified"`
+
+	Products []Product `gorm:"foreignKey:SellerID" json:"products,omitempty"`
 
 	CreatedAt time.Time      `gorm:"precision:6" json:"createdAt"`
 	UpdatedAt time.Time      `gorm:"precision:6" json:"updatedAt"`
