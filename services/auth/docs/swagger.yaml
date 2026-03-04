@@ -1,6 +1,6 @@
 basePath: /api/v1/auth
 definitions:
-  handler.LoginRequest:
+  internal_handler.LoginRequest:
     properties:
       email:
         example: john@example.com
@@ -13,7 +13,7 @@ definitions:
     - email
     - password
     type: object
-  handler.RegisterRequest:
+  internal_handler.RegisterRequest:
     properties:
       email:
         example: john@example.com
@@ -34,7 +34,7 @@ definitions:
     - password
     - role
     type: object
-  handler.ResendOTPRequest:
+  internal_handler.ResendOTPRequest:
     properties:
       email:
         example: john@example.com
@@ -42,7 +42,7 @@ definitions:
     required:
     - email
     type: object
-  handler.VerifyRequest:
+  internal_handler.VerifyRequest:
     properties:
       email:
         example: john@example.com
@@ -120,7 +120,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/handler.LoginRequest'
+          $ref: '#/definitions/internal_handler.LoginRequest'
       produces:
       - application/json
       responses:
@@ -181,6 +181,23 @@ paths:
       summary: Health check the server
       tags:
       - System
+  /public-key:
+    get:
+      description: Exposes a public endpoint to share the Public Key used for verification.
+      responses:
+        "200":
+          description: Success Public Key
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error during exchange or parsing
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Share Public Key
+      tags:
+      - Authentication
   /refresh:
     post:
       description: Rotates the refresh token securely. Requires the 'refreshToken'
@@ -223,7 +240,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/handler.RegisterRequest'
+          $ref: '#/definitions/internal_handler.RegisterRequest'
       produces:
       - application/json
       responses:
@@ -262,7 +279,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/handler.ResendOTPRequest'
+          $ref: '#/definitions/internal_handler.ResendOTPRequest'
       produces:
       - application/json
       responses:
@@ -296,7 +313,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/handler.VerifyRequest'
+          $ref: '#/definitions/internal_handler.VerifyRequest'
       produces:
       - application/json
       responses:

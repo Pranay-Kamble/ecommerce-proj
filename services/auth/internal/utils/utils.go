@@ -18,6 +18,7 @@ import (
 var (
 	privateKey   *rsa.PrivateKey
 	publicKey    *rsa.PublicKey
+	publicKeyPEM []byte
 	otpGenerator nanoid.Interface
 )
 
@@ -57,8 +58,8 @@ func Init(length int) error {
 	if privatePemPath == "" {
 		logger.Fatal("env variable PRIVATE_PEM_PATH not found")
 	}
-
-	publicKeyPEM, err := os.ReadFile(publicPemPath)
+	var err error
+	publicKeyPEM, err = os.ReadFile(publicPemPath)
 	if err != nil {
 		return fmt.Errorf("utils: failed to read public key: %w", err)
 	}
@@ -173,4 +174,13 @@ func GetOTP() (string, error) {
 	}
 
 	return otp.String(), nil
+}
+
+func GetPublicKeyString() (string, error) {
+	result := string(publicKeyPEM)
+	if result == "" {
+		return "", errors.New("utils: public key is empty")
+	}
+
+	return result, nil
 }
