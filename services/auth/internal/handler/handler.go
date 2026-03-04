@@ -446,3 +446,23 @@ func (h *AuthHandler) GoogleCallback(c *gin.Context) {
 
 	h.issueTokensAndRespond(c, user.ID, user.Email, user.Role, "User logged in", http.StatusCreated)
 }
+
+// GetPublicKey godoc
+// @Summary      Share Public Key
+// @Description  Exposes a public endpoint to share the Public Key used for verification.
+// @Tags         Authentication
+// @Success      200  {object}  map[string]interface{} "Success Public Key"
+// @Failure      500  {object}  map[string]interface{} "Internal server error during exchange or parsing"
+// @Router       /public-key [get]
+func (h *AuthHandler) GetPublicKey(c *gin.Context) {
+	publicKey, err := utils.GetPublicKeyString()
+	if err != nil {
+		logger.Error("handler: failed to get public key")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"publicKey": publicKey,
+	})
+}

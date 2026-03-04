@@ -101,7 +101,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handler.LoginRequest"
+                            "$ref": "#/definitions/internal_handler.LoginRequest"
                         }
                     }
                 ],
@@ -186,6 +186,31 @@ const docTemplate = `{
                 }
             }
         },
+        "/public-key": {
+            "get": {
+                "description": "Exposes a public endpoint to share the Public Key used for verification.",
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Share Public Key",
+                "responses": {
+                    "200": {
+                        "description": "Success Public Key",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error during exchange or parsing",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/refresh": {
             "post": {
                 "description": "Rotates the refresh token securely. Requires the 'refreshToken' HttpOnly cookie to be present.",
@@ -248,7 +273,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handler.RegisterRequest"
+                            "$ref": "#/definitions/internal_handler.RegisterRequest"
                         }
                     }
                 ],
@@ -304,7 +329,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handler.ResendOTPRequest"
+                            "$ref": "#/definitions/internal_handler.ResendOTPRequest"
                         }
                     }
                 ],
@@ -353,7 +378,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handler.VerifyRequest"
+                            "$ref": "#/definitions/internal_handler.VerifyRequest"
                         }
                     }
                 ],
@@ -391,7 +416,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "handler.LoginRequest": {
+        "internal_handler.LoginRequest": {
             "type": "object",
             "required": [
                 "email",
@@ -409,7 +434,7 @@ const docTemplate = `{
                 }
             }
         },
-        "handler.RegisterRequest": {
+        "internal_handler.RegisterRequest": {
             "type": "object",
             "required": [
                 "email",
@@ -437,7 +462,7 @@ const docTemplate = `{
                 }
             }
         },
-        "handler.ResendOTPRequest": {
+        "internal_handler.ResendOTPRequest": {
             "type": "object",
             "required": [
                 "email"
@@ -449,7 +474,7 @@ const docTemplate = `{
                 }
             }
         },
-        "handler.VerifyRequest": {
+        "internal_handler.VerifyRequest": {
             "type": "object",
             "required": [
                 "email",
