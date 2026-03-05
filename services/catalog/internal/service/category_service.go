@@ -22,6 +22,13 @@ type categoryService struct {
 }
 
 func (p *categoryService) GetCategoryBreadCrumbs(c context.Context, parentPublicID string) ([]*domain.Category, error) {
+	category, err := p.categoryRepo.GetByPublicID(c, parentPublicID)
+	if err != nil {
+		return nil, fmt.Errorf("service: failed to get category by public id: %w", err)
+	} else if category == nil {
+		return nil, fmt.Errorf("service: category not found")
+	}
+
 	upperCategories, err := p.categoryRepo.GetAncestors(c, parentPublicID)
 	if err != nil {
 		return nil, fmt.Errorf("service: failed to get ancestors: %w", err)
@@ -39,6 +46,9 @@ func (p *categoryService) GetAllCategories(c context.Context, publicID string) (
 		category, innerErr := p.categoryRepo.GetByPublicID(c, publicID)
 		if innerErr != nil {
 			return nil, fmt.Errorf("service: failed to get category by public id: %w", innerErr)
+		}
+		if category == nil {
+			return nil, fmt.Errorf("service: category not found")
 		}
 		categories, err = p.categoryRepo.GetAllCategories(c, &category.ID)
 	}
