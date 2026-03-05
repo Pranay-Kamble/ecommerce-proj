@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"ecommerce/services/catalog/internal/service"
 	"net/http"
 	"strings"
 
@@ -37,24 +38,41 @@ func RequireUser(c *gin.Context) {
 	c.Next()
 }
 
-func RequireSeller(c *gin.Context) {
-	claims, err := c.Get("claims")
-	if !err {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "claims not found"})
-		return
-	}
+func RequireSeller(sellerService service.SellerService) gin.HandlerFunc {
 
-	claimsMap, ok := claims.(map[string]interface{})
-	if !ok {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid claims format"})
-		return
-	}
+	return func(c *gin.Context) {
 
-	role, ok := claimsMap["role"].(string)
-	if !ok || role != "seller" {
-		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "forbidden: seller role required"})
-		return
-	}
+		claimsObj, exists := c.Get("claims")
+		if !exists {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized: claims missing"})
+			return
+		}
 
-	c.Next()
+		claims, ok := claimsObj.(map[string]interface{})
+		if !ok {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid claims format"})
+			return
+		}
+
+		role, ok := claims["role"].(string)
+		if !ok || role != "seller" {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "forbidden: seller access required"})
+			return
+		}
+
+		userID, ok := claims["id"].(string)
+		if !ok || userID == "" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized: user ID missing"})
+			return
+		}
+
+		seller, err := sellerService.GetByUserID(c.Request.Context(), userID)
+		if err != nil || seller == nil {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "seller profile not found. please complete onboarding."})
+			return
+		}
+
+		c.Set("seller_public_id", seller.PublicID)
+		c.Next()
+	}
 }
