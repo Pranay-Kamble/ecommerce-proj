@@ -28,8 +28,8 @@ type Product struct {
 	Dimensions  map[string]interface{} `gorm:"type:jsonb;serializer:json" json:"dimensions"`
 	Slug        string                 `gorm:"type:varchar(50)" json:"slug"`
 
-	Variants []ProductVariant `gorm:"foreignKey:ProductID;references:ID" json:"variants"`
-	Images   []Image          `gorm:"type:jsonb;serializer:json" json:"images"`
+	Variants []*ProductVariant `gorm:"foreignKey:ProductID;references:ID" json:"variants"`
+	Images   []*Image          `gorm:"type:jsonb;serializer:json" json:"images"`
 
 	Seller   Seller   `gorm:"foreignKey:SellerID" json:"seller,omitempty"`
 	Category Category `gorm:"foreignKey:CategoryID" json:"category,omitempty"`
@@ -48,7 +48,7 @@ type ProductVariant struct {
 	Price     float64 `gorm:"type:decimal(10,2);" json:"price"`
 	Inventory int     `gorm:"type:int;default:0" json:"inventory"`
 
-	Images []Image `gorm:"type:jsonb;serializer:json" json:"images"`
+	Images []*Image `gorm:"type:jsonb;serializer:json" json:"images"`
 
 	Specifications map[string]interface{} `gorm:"type:jsonb;serializer:json;index:idx_specs,type:gin" json:"specifications"`
 
