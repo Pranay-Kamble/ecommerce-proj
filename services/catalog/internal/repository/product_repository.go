@@ -12,6 +12,8 @@ import (
 
 type ProductRepository interface {
 	Create(ctx context.Context, product *domain.Product) error
+
+	GetAll(ctx context.Context, offset, limit int) ([]*domain.Product, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*domain.Product, error)
 	GetByPublicID(ctx context.Context, publicID string) (*domain.Product, error)
 	GetBySellerID(ctx context.Context, sellerID uuid.UUID, limit, offset int) ([]*domain.Product, error)
@@ -24,6 +26,19 @@ type ProductRepository interface {
 
 type productRepository struct {
 	db *gorm.DB
+}
+
+func (p *productRepository) GetAll(ctx context.Context, offset, limit int) ([]*domain.Product, error) {
+	products, err := gorm.G[*domain.Product](p.db).
+		Preload("Category", nil).
+		Preload("Seller", nil).
+		Preload("Variants", nil).
+		Offset(offset).Limit(limit).Find(ctx)
+
+	if err != nil {
+		return nil, fmt.Errorf("repository: failed to get all products: %w", err)
+	}
+	return products, nil
 }
 
 func (p *productRepository) Delete(ctx context.Context, id uuid.UUID) error {
@@ -89,7 +104,7 @@ func (p *productRepository) GetBySellerID(ctx context.Context, sellerID uuid.UUI
 		Preload("Seller", nil).
 		Preload("Variants", nil).
 		Where("seller_id = ? ", sellerID).
-		Limit(limit).Offset(offset).Find(ctx)
+		Offset(offset).Limit(limit).Find(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("repository: failed to get products by seller ID: %w", err)
 	}
@@ -116,7 +131,7 @@ func (p *productRepository) GetByCategoryID(ctx context.Context, categoryID uuid
 		Preload("Seller", nil).
 		Preload("Variants", nil).
 		Where("category_id = ?", categoryID).
-		Limit(limit).Offset(offset).Find(ctx)
+		Offset(offset).Limit(limit).Find(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("repository: failed to get products by category ID: %w", err)
 	}
