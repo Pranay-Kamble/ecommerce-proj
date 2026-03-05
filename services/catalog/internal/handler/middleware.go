@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RequireAuth(c *gin.Context) {
+func RequireUser(c *gin.Context) {
 	authHeader := c.GetHeader("Authorization")
 
 	if authHeader == "" {
@@ -29,11 +29,32 @@ func RequireAuth(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid or expired token"})
 		return
 	}
-	
+
 	if userID, ok := claims["id"].(string); ok {
 		c.Set("userID", userID)
 	}
-
 	c.Set("claims", claims)
+	c.Next()
+}
+
+func RequireSeller(c *gin.Context) {
+	claims, err := c.Get("claims")
+	if !err {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "claims not found"})
+		return
+	}
+
+	claimsMap, ok := claims.(map[string]interface{})
+	if !ok {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid claims format"})
+		return
+	}
+
+	role, ok := claimsMap["role"].(string)
+	if !ok || role != "seller" {
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "forbidden: seller role required"})
+		return
+	}
+
 	c.Next()
 }
