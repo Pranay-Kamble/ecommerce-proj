@@ -28,8 +28,8 @@ type Product struct {
 	Dimensions  map[string]interface{} `gorm:"type:jsonb;serializer:json" json:"dimensions"`
 	Slug        string                 `gorm:"type:varchar(50)" json:"slug"`
 
-	Variants []*ProductVariant `gorm:"foreignKey:ProductID;references:ID" json:"variants"`
-	Images   []*Image          `gorm:"type:jsonb;serializer:json" json:"images"`
+	Variants []*Variant `gorm:"foreignKey:ProductID;references:ID" json:"variants"`
+	Images   []*Image   `gorm:"type:jsonb;serializer:json" json:"images"`
 
 	Seller   Seller   `gorm:"foreignKey:SellerID" json:"seller,omitempty"`
 	Category Category `gorm:"foreignKey:CategoryID" json:"category,omitempty"`
@@ -39,8 +39,9 @@ type Product struct {
 	DeletedAt gorm.DeletedAt `gorm:"precision:6" json:"deletedAt"`
 }
 
-type ProductVariant struct {
+type Variant struct {
 	ID        uuid.UUID `gorm:"primaryKey;type:uuid;" json:"-"`
+	PublicID  string    `gorm:"type:varchar(25);uniqueIndex;not null" json:"id"`
 	ProductID uuid.UUID `gorm:"type:uuid;not null;index" json:"productId"`
 
 	Title     string  `gorm:"type:varchar(500);not null" json:"title"`
@@ -171,13 +172,22 @@ func (c *Category) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
-func (p *ProductVariant) BeforeCreate(tx *gorm.DB) error {
+func (p *Variant) BeforeCreate(tx *gorm.DB) error {
 	if p.ID == uuid.Nil {
 		newID, err := uuid.NewV7()
 		if err != nil {
-			return fmt.Errorf("domain: could not generate product variant ID: %w", err)
+			return fmt.Errorf("domain: could not generate variant ID: %w", err)
 		}
 		p.ID = newID
+	}
+
+	if p.PublicID == "" {
+		publicID, err := nanoid.New()
+		if err != nil {
+			return fmt.Errorf("domain: could not generate variant public ID: %w", err)
+		}
+		publicIDStr := "var_" + publicID.String()
+		p.PublicID = publicIDStr
 	}
 	return nil
 }

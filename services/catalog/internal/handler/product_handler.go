@@ -91,8 +91,8 @@ type CreateProductRequest struct {
 	Highlights  []string               `json:"highlights"`
 	Dimensions  map[string]interface{} `json:"dimensions"`
 
-	Images   []*domain.Image          `json:"images"`
-	Variants []*domain.ProductVariant `json:"variants"`
+	Images   []*domain.Image   `json:"images"`
+	Variants []*domain.Variant `json:"variants"`
 
 	CategoryPublicID string `json:"category_public_id" required:"true"`
 }
@@ -147,8 +147,8 @@ type UpdateProductRequest struct {
 	Highlights  []string               `json:"highlights" required:"true"`
 	Dimensions  map[string]interface{} `json:"dimensions"`
 
-	Variants []*domain.ProductVariant `json:"variants"`
-	Images   []*domain.Image          `json:"images"`
+	Variants []*domain.Variant `json:"variants"`
+	Images   []*domain.Image   `json:"images"`
 }
 
 func (h *ProductHandler) UpdateProduct(c *gin.Context) {
