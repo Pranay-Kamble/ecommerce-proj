@@ -31,8 +31,10 @@ func RequireUser(c *gin.Context) {
 		return
 	}
 
-	if userID, ok := claims["id"].(string); ok {
-		c.Set("userID", userID)
+	_, ok := claims["id"].(string)
+	if !ok {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid token claims: user ID missing"})
+		return
 	}
 	c.Set("claims", claims)
 	c.Next()

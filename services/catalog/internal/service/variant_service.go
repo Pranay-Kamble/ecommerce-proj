@@ -7,25 +7,25 @@ import (
 	"fmt"
 )
 
-type ProductVariantService interface {
-	CreateVariant(c context.Context, productPublicID string, item *domain.ProductVariant) error
+type VariantService interface {
+	CreateVariant(c context.Context, productPublicID string, item *domain.Variant) error
 	UpdatePriceAndStock(c context.Context, sku string, newPrice float64, stock int) error
-	GetBySKU(c context.Context, sku string) (*domain.ProductVariant, error)
+	GetBySKU(c context.Context, sku string) (*domain.Variant, error)
 }
 
 type productVariantService struct {
-	variantRepo repository.ProductVariantRepository
+	variantRepo repository.VariantRepository
 	productRepo repository.ProductRepository
 }
 
-func NewProductVariantService(variantRepo repository.ProductVariantRepository, productRepo repository.ProductRepository) ProductVariantService {
+func NewProductVariantService(variantRepo repository.VariantRepository, productRepo repository.ProductRepository) VariantService {
 	return &productVariantService{
 		variantRepo: variantRepo,
 		productRepo: productRepo,
 	}
 }
 
-func (pv *productVariantService) CreateVariant(c context.Context, productPublicID string, item *domain.ProductVariant) error {
+func (pv *productVariantService) CreateVariant(c context.Context, productPublicID string, item *domain.Variant) error {
 	product, err := pv.productRepo.GetByPublicID(c, productPublicID)
 	if err != nil {
 		return fmt.Errorf("service: failed to get product by public id: %w", err)
@@ -67,7 +67,7 @@ func (pv *productVariantService) UpdatePriceAndStock(c context.Context, sku stri
 	return nil
 }
 
-func (pv *productVariantService) GetBySKU(c context.Context, sku string) (*domain.ProductVariant, error) {
+func (pv *productVariantService) GetBySKU(c context.Context, sku string) (*domain.Variant, error) {
 	variant, err := pv.variantRepo.GetBySKU(c, sku)
 	if err != nil {
 		return nil, fmt.Errorf("service: failed to get product variant: %w", err)
