@@ -62,7 +62,7 @@ type Category struct {
 	ID       uuid.UUID `gorm:"primaryKey;type:uuid;" json:"-"`
 	PublicID string    `gorm:"type:varchar(25);uniqueIndex:idx_public_id" json:"id"`
 	Name     string    `gorm:"type:varchar(50);uniqueIndex:idx_name" json:"name"`
-	Path     string    `gorm:"type:ltree;index:idx_path,class:gist,option:gist_ltree_ops" json:"path"`
+	Path     string    `gorm:"type:ltree;index:idx_path,type:gist" json:"path"`
 
 	ParentID *uuid.UUID `gorm:"type:uuid;index:idx_parent_id" json:"parentId,omitempty"`
 	Parent   *Category  `gorm:"foreignKey:ParentID" json:"parent,omitempty"`
@@ -85,7 +85,7 @@ type Seller struct {
 	SupportEmail string `gorm:"type:varchar(100);not null" json:"supportEmail"`
 	SupportPhone string `gorm:"type:varchar(20)" json:"supportPhone"`
 
-	GSTIN             string `gorm:"type:varchar(15),index" json:"gstin"`
+	GSTIN             string `gorm:"type:varchar(15);uniqueIndex" json:"gstin"`
 	RegisteredAddress string `gorm:"type:text" json:"registeredAddress"`
 
 	Status     string `gorm:"type:varchar(20);default:'pending'" json:"status"`
