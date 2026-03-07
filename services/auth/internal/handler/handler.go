@@ -7,6 +7,7 @@ import (
 	"ecommerce/services/auth/internal/utils"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -461,6 +462,8 @@ func (h *AuthHandler) GetPublicKey(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		return
 	}
+
+	logger.Info(fmt.Sprintf("handler: public key: %s", publicKey))
 
 	c.JSON(http.StatusOK, gin.H{
 		"publicKey": publicKey,
