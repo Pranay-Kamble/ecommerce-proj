@@ -17,6 +17,8 @@ type VariantRepository interface {
 	UpdateInventory(ctx context.Context, sku string, quantityChange int) error
 	UpdatePrice(ctx context.Context, sku string, newPrice float64) error
 	UpdateByID(ctx context.Context, id *uuid.UUID, updated *domain.Variant) error
+
+	Delete(ctx context.Context, id *uuid.UUID) error
 }
 
 type variantRepository struct {
@@ -102,6 +104,15 @@ func (v *variantRepository) UpdateByID(ctx context.Context, id *uuid.UUID, updat
 	}
 	if err != nil {
 		return fmt.Errorf("repository: failed to update product variant: %w", err)
+	}
+	return nil
+}
+
+func (v *variantRepository) Delete(ctx context.Context, id *uuid.UUID) error {
+	_, err := gorm.G[*domain.Variant](v.db).Where("id = ?", id).Delete(ctx)
+
+	if err != nil {
+		return fmt.Errorf("repository: failed to delete product variant: %w", err)
 	}
 	return nil
 }
