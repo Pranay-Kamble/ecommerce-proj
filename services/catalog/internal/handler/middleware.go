@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"ecommerce/pkg/logger"
 	"ecommerce/services/catalog/internal/service"
 	"net/http"
 	"strings"
@@ -8,6 +9,7 @@ import (
 	"ecommerce/services/catalog/internal/utils"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 func RequireUser(c *gin.Context) {
@@ -27,6 +29,14 @@ func RequireUser(c *gin.Context) {
 
 	claims, err := utils.VerifyJWT(tokenString)
 	if err != nil {
+		if strings.Contains(err.Error(), "auth key error") {
+			logger.Error("Internal Auth Service Error: ", zap.Error(err))
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "internal server error: unable to verify token signature"})
+			return
+		}
+
+		logger.Error("JWT :", zap.String("token", tokenString))
+		logger.Error(err.Error())
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid or expired token"})
 		return
 	}
