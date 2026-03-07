@@ -162,10 +162,33 @@ func (h *VariantHandler) UpdateVariant(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"message": "variant updated successfully"})
 }
 
-// DeleteVariant handles DELETE /api/v1/catalog/seller/variants/:id
 func (h *VariantHandler) DeleteVariant(c *gin.Context) {
-	// 1. Extract variant ID from URL
-	// 2. Extract seller_public_id from context
-	// 3. Call h.variantService.DeleteVariant(ctx, sellerID, variantID)
-	// 4. Return 200 OK
+	variantPublicID := c.Param("id")
+	if len(variantPublicID) < 3 || !strings.HasPrefix(variantPublicID, "var_") {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid variant id"})
+		return
+	}
+	sellerPublicID, exists := c.Get("seller_public_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "seller information missing in context"})
+		return
+	}
+
+	err := h.variantService.DeleteVariant(c.Request.Context(), variantPublicID, sellerPublicID.(string))
+	if err != nil {
+		errorMsg := err.Error()
+		if errorMsg == "service: no variant exists" || errorMsg == "service: no seller exists" || errorMsg == "service: no product exists" {
+			c.JSON(http.StatusNotFound, gin.H{"error": "variant or seller or product not found"})
+		} else if errorMsg == "service: seller does not own the product" {
+			c.JSON(http.StatusConflict, gin.H{"error": "seller does not own the product"})
+		} else if strings.HasPrefix(errorMsg, "service: failed to get") {
+			logger.Error("handler: failed to get variant or seller during delete: %w", zap.Error(err))
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		} else {
+			logger.Error("handler: failed to delete the variant", zap.Error(err))
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		}
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "variant deleted successfully"})
 }

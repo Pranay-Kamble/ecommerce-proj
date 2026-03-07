@@ -12,12 +12,48 @@ type VariantService interface {
 	UpdatePriceAndStock(c context.Context, sku string, newPrice float64, stock int) error
 	UpdateVariant(c context.Context, productPublicID string, variantPublicID string, sellerPublicID string, newVariant *domain.Variant) error
 	GetBySKU(c context.Context, sku string) (*domain.Variant, error)
+
+	DeleteVariant(c context.Context, variantPublicID string, sellerPublicID string) error
 }
 
 type variantService struct {
 	variantRepo repository.VariantRepository
 	productRepo repository.ProductRepository
 	sellerRepo  repository.SellerRepository
+}
+
+func (v *variantService) DeleteVariant(c context.Context, variantPublicID string, sellerPublicID string) error {
+	variant, err := v.variantRepo.GetByPublicID(c, variantPublicID)
+	if err != nil {
+		return fmt.Errorf("service: failed to get variant by public id: %w", err)
+	} else if variant == nil {
+		return fmt.Errorf("service: no variant exists")
+	}
+
+	seller, err := v.sellerRepo.GetByPublicID(c, sellerPublicID)
+	if err != nil {
+		return fmt.Errorf("service: failed to get seller by public id: %w", err)
+	} else if seller == nil {
+		return fmt.Errorf("service: no seller exists")
+	}
+
+	product, err := v.productRepo.GetByID(c, variant.ProductID)
+	if err != nil {
+		return fmt.Errorf("service: failed to get product by id: %w", err)
+	} else if product == nil {
+		return fmt.Errorf("service: no product exists")
+	}
+
+	if product.SellerID != seller.ID {
+		return fmt.Errorf("service: seller does not own the product")
+	}
+
+	err = v.variantRepo.Delete(c, &variant.ID)
+	if err != nil {
+		return fmt.Errorf("service: failed to delete product variant: %w", err)
+	}
+
+	return nil
 }
 
 func NewVariantService(variantRepo repository.VariantRepository, productRepo repository.ProductRepository, sellerRepo repository.SellerRepository) VariantService {
