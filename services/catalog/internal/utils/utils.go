@@ -75,7 +75,7 @@ func fetchPublicKeyFromAuth() (*rsa.PublicKey, error) {
 		return nil, errors.New("AUTH_SERVER_BASE_URL is missing")
 	}
 
-	url := strings.TrimRight(authService, "/") + "/api/v1/auth/public-key"
+	url := strings.TrimRight(authService, "/") + "/public-key"
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -83,9 +83,9 @@ func fetchPublicKeyFromAuth() (*rsa.PublicKey, error) {
 	}
 
 	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			logger.Error("failed to close auth service: %w", zap.Error(err))
+		innerErr := Body.Close()
+		if innerErr != nil {
+			logger.Error("failed to close auth service: ", zap.Error(innerErr))
 		}
 	}(resp.Body)
 

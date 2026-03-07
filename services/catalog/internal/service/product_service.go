@@ -5,6 +5,8 @@ import (
 	"ecommerce/services/catalog/internal/domain"
 	"ecommerce/services/catalog/internal/repository"
 	"fmt"
+	"os"
+	"strconv"
 )
 
 type ProductService interface {
@@ -14,6 +16,7 @@ type ProductService interface {
 
 	GetProductByPublicID(ctx context.Context, publicID string) (*domain.Product, error)
 
+	ListAllProducts(ctx context.Context, page, limit int) ([]*domain.Product, error)
 	ListProductsByCategory(ctx context.Context, categoryPublicID string, limit, offset int) ([]*domain.Product, error)
 	ListProductsBySeller(ctx context.Context, sellerUserID string, limit, offset int) ([]*domain.Product, error)
 }
@@ -24,11 +27,26 @@ type productService struct {
 	sellerRepo   repository.SellerRepository
 }
 
+func (p *productService) ListAllProducts(ctx context.Context, page, limit int) ([]*domain.Product, error) {
+	productsPerPage, err := strconv.Atoi(os.Getenv("DEFAULT_LIMIT"))
+	if err != nil {
+		productsPerPage = 50
+	}
+
+	offset := (page - 1) * productsPerPage
+
+	products, err := p.productRepo.GetAll(ctx, offset, limit)
+	if err != nil {
+		return nil, fmt.Errorf("service: failed to get all products: %w", err)
+	}
+	return products, nil
+}
+
 func (p *productService) UpdateProduct(ctx context.Context, sellerPublicID string, productPublicID string, categoryPublicID string, updatedData *domain.Product) error {
 	existingProduct, err := p.productRepo.GetByPublicID(ctx, productPublicID)
 
 	if err != nil {
-		return fmt.Errorf("service: product does not exist")
+		return fmt.Errorf("service: failed to find product: %w", err)
 	}
 	if existingProduct == nil {
 		return fmt.Errorf("service: product does not exist")
@@ -36,9 +54,11 @@ func (p *productService) UpdateProduct(ctx context.Context, sellerPublicID strin
 
 	seller, err := p.sellerRepo.GetByPublicID(ctx, sellerPublicID)
 	if err != nil {
-		return fmt.Errorf("service: failed to find seller : %w", err)
-	} else if seller == nil || seller.ID != existingProduct.SellerID {
-		return fmt.Errorf("service: unauthorized. seller not valid or does not own this product %s", sellerPublicID)
+		return fmt.Errorf("service: failed to find seller: %w", err)
+	} else if seller == nil {
+		return fmt.Errorf("service: seller does not exist")
+	} else if seller.ID != existingProduct.SellerID {
+		return fmt.Errorf("service: unauthorized. seller does not own this product")
 	}
 
 	err = p.checkProductValidity(updatedData.Title, updatedData.Description, updatedData.Brand)

@@ -1,0 +1,2 @@
+1) API Gateway to Handle Authentication and Authorization before Requests Reach the Microservice
+2) Handle Errors without string checking for specific error messages, instead use error codes or types

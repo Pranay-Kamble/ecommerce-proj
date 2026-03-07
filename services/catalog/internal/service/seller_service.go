@@ -24,7 +24,7 @@ func NewSellerService(sellerRepo repository.SellerRepository) SellerService {
 }
 
 func (s *sellerService) CreateSeller(c context.Context, seller *domain.Seller) error {
-	//we need validate seller here
+
 	existingSeller, err := s.sellerRepo.GetByUserID(c, seller.UserID)
 	if err != nil {
 		return fmt.Errorf("service: failed to get seller by user ID: %w", err)
@@ -59,6 +59,9 @@ func (s *sellerService) GetByPublicID(c context.Context, publicID string) (*doma
 	seller, err := s.sellerRepo.GetByPublicID(c, publicID)
 	if err != nil {
 		return nil, fmt.Errorf("service: failed to get seller by public ID: %w", err)
+	}
+	if seller == nil {
+		return nil, nil
 	}
 	return seller, nil
 }

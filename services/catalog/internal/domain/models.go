@@ -28,8 +28,8 @@ type Product struct {
 	Dimensions  map[string]interface{} `gorm:"type:jsonb;serializer:json" json:"dimensions"`
 	Slug        string                 `gorm:"type:varchar(50)" json:"slug"`
 
-	Variants []ProductVariant `gorm:"foreignKey:ProductID;references:ID" json:"variants"`
-	Images   []Image          `gorm:"type:jsonb;serializer:json" json:"images"`
+	Variants []*Variant `gorm:"foreignKey:ProductID;references:ID" json:"variants"`
+	Images   []*Image   `gorm:"type:jsonb;serializer:json" json:"images"`
 
 	Seller   Seller   `gorm:"foreignKey:SellerID" json:"seller,omitempty"`
 	Category Category `gorm:"foreignKey:CategoryID" json:"category,omitempty"`
@@ -39,8 +39,9 @@ type Product struct {
 	DeletedAt gorm.DeletedAt `gorm:"precision:6" json:"deletedAt"`
 }
 
-type ProductVariant struct {
+type Variant struct {
 	ID        uuid.UUID `gorm:"primaryKey;type:uuid;" json:"-"`
+	PublicID  string    `gorm:"type:varchar(25);uniqueIndex;not null" json:"id"`
 	ProductID uuid.UUID `gorm:"type:uuid;not null;index" json:"productId"`
 
 	Title     string  `gorm:"type:varchar(500);not null" json:"title"`
@@ -48,7 +49,7 @@ type ProductVariant struct {
 	Price     float64 `gorm:"type:decimal(10,2);" json:"price"`
 	Inventory int     `gorm:"type:int;default:0" json:"inventory"`
 
-	Images []Image `gorm:"type:jsonb;serializer:json" json:"images"`
+	Images []*Image `gorm:"type:jsonb;serializer:json" json:"images"`
 
 	Specifications map[string]interface{} `gorm:"type:jsonb;serializer:json;index:idx_specs,type:gin" json:"specifications"`
 
@@ -61,7 +62,7 @@ type Category struct {
 	ID       uuid.UUID `gorm:"primaryKey;type:uuid;" json:"-"`
 	PublicID string    `gorm:"type:varchar(25);uniqueIndex:idx_public_id" json:"id"`
 	Name     string    `gorm:"type:varchar(50);uniqueIndex:idx_name" json:"name"`
-	Path     string    `gorm:"type:ltree;index:idx_path,class:gist,option:gist_ltree_ops" json:"path"`
+	Path     string    `gorm:"type:ltree;index:idx_path,type:gist" json:"path"`
 
 	ParentID *uuid.UUID `gorm:"type:uuid;index:idx_parent_id" json:"parentId,omitempty"`
 	Parent   *Category  `gorm:"foreignKey:ParentID" json:"parent,omitempty"`
@@ -84,7 +85,7 @@ type Seller struct {
 	SupportEmail string `gorm:"type:varchar(100);not null" json:"supportEmail"`
 	SupportPhone string `gorm:"type:varchar(20)" json:"supportPhone"`
 
-	GSTIN             string `gorm:"type:varchar(15),index" json:"gstin"`
+	GSTIN             string `gorm:"type:varchar(15);uniqueIndex" json:"gstin"`
 	RegisteredAddress string `gorm:"type:text" json:"registeredAddress"`
 
 	Status     string `gorm:"type:varchar(20);default:'pending'" json:"status"`
@@ -171,13 +172,22 @@ func (c *Category) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
-func (p *ProductVariant) BeforeCreate(tx *gorm.DB) error {
+func (p *Variant) BeforeCreate(tx *gorm.DB) error {
 	if p.ID == uuid.Nil {
 		newID, err := uuid.NewV7()
 		if err != nil {
-			return fmt.Errorf("domain: could not generate product variant ID: %w", err)
+			return fmt.Errorf("domain: could not generate variant ID: %w", err)
 		}
 		p.ID = newID
+	}
+
+	if p.PublicID == "" {
+		publicID, err := nanoid.New()
+		if err != nil {
+			return fmt.Errorf("domain: could not generate variant public ID: %w", err)
+		}
+		publicIDStr := "var_" + publicID.String()
+		p.PublicID = publicIDStr
 	}
 	return nil
 }
