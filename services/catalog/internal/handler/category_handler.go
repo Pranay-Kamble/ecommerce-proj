@@ -15,6 +15,16 @@ func NewCategoryHandler(categoryService service.CategoryService) *CategoryHandle
 	return &CategoryHandler{categoryService: categoryService}
 }
 
+// GetAllCategories @Summary      Get all categories
+// @Description  Retrieves a list of categories. Optionally filter by parent_id.
+// @Tags         Categories
+// @Accept       json
+// @Produce      json
+// @Param        parent_id  query     string  false  "Parent Category Public ID"
+// @Success      200        {object}  map[string]interface{}
+// @Failure      404        {object}  map[string]interface{}
+// @Failure      500        {object}  map[string]interface{}
+// @Router       /categories [get]
 func (h *CategoryHandler) GetAllCategories(c *gin.Context) {
 	parentIDParams := c.Query("parent_id")
 	categories, err := h.categoryService.GetAllCategories(c.Request.Context(), parentIDParams)
@@ -28,6 +38,18 @@ func (h *CategoryHandler) GetAllCategories(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"data": categories})
 }
+
+// GetBreadcrumbs @Summary      Get category breadcrumbs
+// @Description  Retrieves the hierarchical path for a specific category.
+// @Tags         Categories
+// @Accept       json
+// @Produce      json
+// @Param        category_id  path      string  true  "Category Public ID"
+// @Success      200          {object}  map[string]interface{}
+// @Failure      400          {object}  map[string]interface{}
+// @Failure      404          {object}  map[string]interface{}
+// @Failure      500          {object}  map[string]interface{}
+// @Router       /categories/{category_id}/breadcrumbs [get]
 
 func (h *CategoryHandler) GetBreadcrumbs(c *gin.Context) {
 	categoryPublicID := c.Param("category_id")

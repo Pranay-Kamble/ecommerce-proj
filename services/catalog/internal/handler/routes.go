@@ -5,6 +5,10 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+
+	_ "ecommerce/services/catalog/docs"
 )
 
 func RegisterRoutes(
@@ -15,6 +19,7 @@ func RegisterRoutes(
 	variantHandler *VariantHandler,
 	sellerService service.SellerService,
 ) {
+	router.GET("/api/v1/catalog/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	v1 := router.Group("/api/v1/catalog")
 
 	public := v1.Group("/")
