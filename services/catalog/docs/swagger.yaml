@@ -1,0 +1,556 @@
+basePath: /api/v1/catalog
+definitions:
+  domain.Image:
+    properties:
+      altText:
+        type: string
+      isPrimary:
+        type: boolean
+      url:
+        type: string
+    type: object
+  handler.CreateSellerRequest:
+    properties:
+      description:
+        type: string
+      gstin:
+        type: string
+      logoUrl:
+        type: string
+      name:
+        minLength: 1
+        type: string
+      registeredAddress:
+        type: string
+      supportEmail:
+        type: string
+      supportPhone:
+        type: string
+    required:
+    - gstin
+    - name
+    type: object
+  handler.CreateVariantRequest:
+    properties:
+      images:
+        items:
+          $ref: '#/definitions/domain.Image'
+        type: array
+      inventory:
+        minimum: 0
+        type: integer
+      price:
+        type: number
+      sku:
+        type: string
+      specifications:
+        additionalProperties: true
+        type: object
+      title:
+        type: string
+    required:
+    - price
+    - sku
+    - title
+    type: object
+  handler.UpdateProductRequest:
+    type: object
+  handler.UpdateVariantRequest:
+    properties:
+      images:
+        items:
+          $ref: '#/definitions/domain.Image'
+        type: array
+      inventory:
+        minimum: 0
+        type: integer
+      price:
+        minimum: 0
+        type: number
+      productId:
+        type: string
+      sku:
+        type: string
+      specifications:
+        additionalProperties: true
+        type: object
+      title:
+        type: string
+    required:
+    - price
+    - productId
+    - sku
+    - title
+    type: object
+host: localhost:8082
+info:
+  contact:
+    email: iampranaykamble1@gmail.com
+    name: Pranay Kamble
+  description: E-commerce Catalog management including Products, Variants, Categories,
+    and Sellers.
+  title: Catalog Microservice API
+  version: "1.0"
+paths:
+  /categories:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves a list of categories. Optionally filter by parent_id.
+      parameters:
+      - description: Parent Category Public ID
+        in: query
+        name: parent_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Categories
+  /products:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves a paginated list of products. Can filter by category
+        or seller.
+      parameters:
+      - description: Category Public ID
+        in: query
+        name: category_id
+        type: string
+      - description: Seller Public ID
+        in: query
+        name: seller_id
+        type: string
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Products
+  /products/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves a single product by its Public ID.
+      parameters:
+      - description: Product Public ID (itm_...)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Products
+  /seller/products/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Soft deletes a product. Seller must own the product.
+      parameters:
+      - description: Product Public ID (itm_...)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      tags:
+      - Seller Products
+    put:
+      consumes:
+      - application/json
+      description: Updates an existing product. Seller must own the product.
+      parameters:
+      - description: Product Public ID (itm_...)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Product update payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.UpdateProductRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      tags:
+      - Seller Products
+  /seller/products/{product_id}/variants:
+    post:
+      consumes:
+      - application/json
+      description: Adds a new variant (size/color/etc.) to a product. Seller must
+        own the product.
+      parameters:
+      - description: Product Public ID (itm_...)
+        in: path
+        name: product_id
+        required: true
+        type: string
+      - description: Variant creation payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateVariantRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      tags:
+      - Seller Variants
+  /seller/variants/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Removes a variant from a product.
+      parameters:
+      - description: Variant Public ID (var_...)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      tags:
+      - Seller Variants
+    put:
+      consumes:
+      - application/json
+      description: Updates stock, price, or details of a variant.
+      parameters:
+      - description: Variant Public ID (var_...)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Variant update payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.UpdateVariantRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      tags:
+      - Seller Variants
+  /sellers:
+    post:
+      consumes:
+      - application/json
+      description: Upgrades a standard user to a Seller profile.
+      parameters:
+      - description: Seller onboarding payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateSellerRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      tags:
+      - Sellers
+  /sellers/me:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves the seller profile for the currently authenticated user.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      tags:
+      - Sellers
+  /variants/{sku}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves a single product variant by its SKU.
+      parameters:
+      - description: Variant SKU
+        in: path
+        name: sku
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Variants
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer " followed by a space and your JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

@@ -19,6 +19,16 @@ func NewVariantHandler(variantService service.VariantService) *VariantHandler {
 	return &VariantHandler{variantService: variantService}
 }
 
+// GetVariantByID @Summary      Get variant by SKU
+// @Description  Retrieves a single product variant by its SKU.
+// @Tags         Variants
+// @Accept       json
+// @Produce      json
+// @Param        sku  path      string  true  "Variant SKU"
+// @Success      200  {object}  map[string]interface{}
+// @Failure      404  {object}  map[string]interface{}
+// @Failure      500  {object}  map[string]interface{}
+// @Router       /variants/{sku} [get]
 func (h *VariantHandler) GetVariantByID(c *gin.Context) {
 	variantSKU := c.Param("sku")
 
@@ -45,6 +55,21 @@ type CreateVariantRequest struct {
 	Images         []*domain.Image        `json:"images"`
 }
 
+// CreateVariant @Summary      Create a product variant
+// @Description  Adds a new variant (size/color/etc.) to a product. Seller must own the product.
+// @Tags         Seller Variants
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Param        product_id  path      string                        true  "Product Public ID (itm_...)"
+// @Param        request     body      handler.CreateVariantRequest  true  "Variant creation payload"
+// @Success      201         {object}  map[string]interface{}
+// @Failure      400         {object}  map[string]interface{}
+// @Failure      401         {object}  map[string]interface{}
+// @Failure      404         {object}  map[string]interface{}
+// @Failure      409         {object}  map[string]interface{}
+// @Failure      500         {object}  map[string]interface{}
+// @Router       /seller/products/{product_id}/variants [post]
 func (h *VariantHandler) CreateVariant(c *gin.Context) {
 	productPublicID := c.Param("product_id")
 
@@ -104,6 +129,22 @@ type UpdateVariantRequest struct {
 	ProductPublicID string                 `json:"productId" binding:"required"`
 }
 
+// UpdateVariant @Summary      Update a variant
+// @Description  Updates stock, price, or details of a variant.
+// @Tags         Seller Variants
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Param        id       path      string                        true  "Variant Public ID (var_...)"
+// @Param        request  body      handler.UpdateVariantRequest  true  "Variant update payload"
+// @Success      200      {object}  map[string]interface{}
+// @Failure      400      {object}  map[string]interface{}
+// @Failure      401      {object}  map[string]interface{}
+// @Failure      403      {object}  map[string]interface{}
+// @Failure      404      {object}  map[string]interface{}
+// @Failure      409      {object}  map[string]interface{}
+// @Failure      500      {object}  map[string]interface{}
+// @Router       /seller/variants/{id} [put]
 func (h *VariantHandler) UpdateVariant(c *gin.Context) {
 
 	variantPublicID := c.Param("id")
@@ -162,6 +203,20 @@ func (h *VariantHandler) UpdateVariant(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"message": "variant updated successfully"})
 }
 
+// DeleteVariant @Summary      Delete a variant
+// @Description  Removes a variant from a product.
+// @Tags         Seller Variants
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Param        id   path      string  true  "Variant Public ID (var_...)"
+// @Success      200  {object}  map[string]interface{}
+// @Failure      400  {object}  map[string]interface{}
+// @Failure      401  {object}  map[string]interface{}
+// @Failure      403  {object}  map[string]interface{}
+// @Failure      404  {object}  map[string]interface{}
+// @Failure      500  {object}  map[string]interface{}
+// @Router       /seller/variants/{id} [delete]
 func (h *VariantHandler) DeleteVariant(c *gin.Context) {
 	variantPublicID := c.Param("id")
 	if len(variantPublicID) < 3 || !strings.HasPrefix(variantPublicID, "var_") {
