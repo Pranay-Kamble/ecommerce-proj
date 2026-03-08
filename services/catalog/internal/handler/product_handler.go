@@ -27,6 +27,18 @@ func NewProductHandler(productService service.ProductService, sellerService serv
 	}
 }
 
+// ListProducts @Summary      List products
+// @Description  Retrieves a paginated list of products. Can filter by category or seller.
+// @Tags         Products
+// @Accept       json
+// @Produce      json
+// @Param        category_id  query     string  false  "Category Public ID"
+// @Param        seller_id    query     string  false  "Seller Public ID"
+// @Param        page         query     int     false  "Page number" default(1)
+// @Param        limit        query     int     false  "Items per page" default(20)
+// @Success      200          {object}  map[string]interface{}
+// @Failure      500          {object}  map[string]interface{}
+// @Router       /products [get]
 func (h *ProductHandler) ListProducts(c *gin.Context) {
 
 	categoryId := c.Query("category_id")
@@ -63,6 +75,16 @@ func (h *ProductHandler) ListProducts(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": products})
 }
 
+// GetProductByID @Summary      Get product by ID
+// @Description  Retrieves a single product by its Public ID.
+// @Tags         Products
+// @Accept       json
+// @Produce      json
+// @Param        id   path      string  true  "Product Public ID (itm_...)"
+// @Success      200  {object}  map[string]interface{}
+// @Failure      400  {object}  map[string]interface{}
+// @Failure      404  {object}  map[string]interface{}
+// @Router       /products/{id} [get]
 func (h *ProductHandler) GetProductByID(c *gin.Context) {
 	productPublicID := c.Param("id")
 
@@ -84,6 +106,18 @@ func (h *ProductHandler) GetProductByID(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": product})
 }
 
+// CreateProductRequest @Summary      Create a new product
+// @Description  Creates a new product. Requires a registered Seller profile.
+// @Tags         Seller Products
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Param        request  body      handler.CreateProductRequest  true  "Product creation payload"
+// @Success      201      {object}  map[string]interface{}
+// @Failure      400      {object}  map[string]interface{}
+// @Failure      401      {object}  map[string]interface{}
+// @Failure      500      {object}  map[string]interface{}
+// @Router       /seller/products [post]
 type CreateProductRequest struct {
 	Title       string                 `json:"title" required:"true" minlength:"3"`
 	Description string                 `json:"description" required:"true"`
@@ -151,6 +185,20 @@ type UpdateProductRequest struct {
 	Images   []*domain.Image   `json:"images"`
 }
 
+// UpdateProduct @Summary      Update a product
+// @Description  Updates an existing product. Seller must own the product.
+// @Tags         Seller Products
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Param        id       path      string                        true  "Product Public ID (itm_...)"
+// @Param        request  body      handler.UpdateProductRequest  true  "Product update payload"
+// @Success      200      {object}  map[string]interface{}
+// @Failure      400      {object}  map[string]interface{}
+// @Failure      401      {object}  map[string]interface{}
+// @Failure      403      {object}  map[string]interface{}
+// @Failure      500      {object}  map[string]interface{}
+// @Router       /seller/products/{id} [put]
 func (h *ProductHandler) UpdateProduct(c *gin.Context) {
 
 	sellerPublicID, ok := c.Get("seller_public_id")
@@ -202,6 +250,18 @@ func (h *ProductHandler) UpdateProduct(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Product updated successfully"})
 }
 
+// DeleteProduct @Summary      Delete a product
+// @Description  Soft deletes a product. Seller must own the product.
+// @Tags         Seller Products
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Param        id   path      string  true  "Product Public ID (itm_...)"
+// @Success      200  {object}  map[string]interface{}
+// @Failure      400  {object}  map[string]interface{}
+// @Failure      401  {object}  map[string]interface{}
+// @Failure      500  {object}  map[string]interface{}
+// @Router       /seller/products/{id} [delete]
 func (h *ProductHandler) DeleteProduct(c *gin.Context) {
 	productPublicID := c.Param("id")
 	if len(productPublicID) < 4 || !strings.HasPrefix(productPublicID, "itm_") {
