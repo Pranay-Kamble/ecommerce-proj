@@ -129,7 +129,7 @@ type UpdateVariantRequest struct {
 	ProductPublicID string                 `json:"productId" binding:"required"`
 }
 
-// UpdateVariant @Summary      Update a variant
+// UpdateVariant @Summary  Update a variant
 // @Description  Updates stock, price, or details of a variant.
 // @Tags         Seller Variants
 // @Security     BearerAuth
@@ -203,7 +203,7 @@ func (h *VariantHandler) UpdateVariant(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"message": "variant updated successfully"})
 }
 
-// DeleteVariant @Summary      Delete a variant
+// DeleteVariant @Summary Delete a variant
 // @Description  Removes a variant from a product.
 // @Tags         Seller Variants
 // @Security     BearerAuth
