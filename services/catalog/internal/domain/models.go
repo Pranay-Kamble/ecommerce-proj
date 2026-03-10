@@ -18,8 +18,8 @@ type Image struct {
 type Product struct {
 	ID         uuid.UUID `gorm:"primaryKey;type:uuid;" json:"-"`
 	PublicID   string    `gorm:"type:varchar(25);uniqueIndex;not null" json:"id"`
-	CategoryID uuid.UUID `gorm:"type:uuid;not null;index" json:"categoryId"`
-	SellerID   uuid.UUID `gorm:"type:uuid;not null;index" json:"sellerId"`
+	CategoryID uuid.UUID `gorm:"type:uuid;not null;index" json:"-"`
+	SellerID   uuid.UUID `gorm:"type:uuid;not null;index" json:"-"`
 
 	Title       string                 `gorm:"type:varchar(500);not null" json:"title"`
 	Brand       string                 `gorm:"type:varchar(100)" json:"brand"`
@@ -42,7 +42,7 @@ type Product struct {
 type Variant struct {
 	ID        uuid.UUID `gorm:"primaryKey;type:uuid;" json:"-"`
 	PublicID  string    `gorm:"type:varchar(25);uniqueIndex;not null" json:"id"`
-	ProductID uuid.UUID `gorm:"type:uuid;not null;index" json:"productId"`
+	ProductID uuid.UUID `gorm:"type:uuid;not null;index" json:"-"`
 
 	Title     string  `gorm:"type:varchar(500);not null" json:"title"`
 	SKU       string  `gorm:"type:varchar(100);not null;uniqueIndex" json:"sku"`
