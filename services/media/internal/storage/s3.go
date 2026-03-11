@@ -74,3 +74,16 @@ func (s *S3Storage) Upload(ctx context.Context, file io.Reader, objectKey string
 	url := fmt.Sprintf("%s/%s/%s", strings.TrimRight(s.Endpoint, "/"), s.BucketName, objectKey)
 	return url, nil
 }
+
+func (s *S3Storage) Delete(ctx context.Context, objectKey string) error {
+	_, err := s.Client.DeleteObject(ctx, &s3.DeleteObjectInput{
+		Bucket: aws.String(s.BucketName),
+		Key:    aws.String(objectKey),
+	})
+
+	if err != nil {
+		return fmt.Errorf("s3: failed to delete object from s3: %w", err)
+	}
+
+	return nil
+}
