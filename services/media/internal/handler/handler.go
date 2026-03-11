@@ -52,6 +52,28 @@ func (h *MediaHandler) UploadSingleImage(c *gin.Context) {
 	})
 }
 
+type DeleteImageRequest struct {
+	URL string `binding:"required,url" json:"url"`
+}
+
+func (h *MediaHandler) DeleteImage(c *gin.Context) {
+	var request DeleteImageRequest
+	err := c.ShouldBindJSON(&request)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	err = h.mediaService.DeleteImage(c.Request.Context(), request.URL)
+	if err != nil {
+		logger.Error("handler: failed to delete image: ", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete image"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Image deleted successfully"})
+}
+
 func (h *MediaHandler) HealthCheck(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "pong"})
 }

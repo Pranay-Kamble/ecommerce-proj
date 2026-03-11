@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"path/filepath"
 	"strings"
 
@@ -16,6 +17,7 @@ import (
 
 type MediaService interface {
 	UploadImage(ctx context.Context, fileHeader *multipart.FileHeader, folder string) (string, error)
+	DeleteImage(ctx context.Context, fileUrl string) error
 }
 
 type mediaService struct {
@@ -63,4 +65,21 @@ func (s *mediaService) UploadImage(ctx context.Context, fileHeader *multipart.Fi
 	}
 
 	return url, nil
+}
+
+func (s *mediaService) DeleteImage(ctx context.Context, fileUrl string) error {
+	objectKey, err := url.Parse(fileUrl)
+	if err != nil {
+		return fmt.Errorf("service: failed to parse file URL: %w", err)
+	}
+	prefixToTrim := fmt.Sprintf("/%s/", s.s3Storage.BucketName)
+	objectKeyString := strings.TrimPrefix(objectKey.Path, prefixToTrim)
+	
+	err = s.s3Storage.Delete(ctx, objectKeyString)
+
+	if err != nil {
+		return fmt.Errorf("service: failed to delete file: %w", err)
+	}
+
+	return nil
 }

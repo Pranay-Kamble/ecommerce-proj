@@ -11,5 +11,6 @@ func RegisterRoutes(router *gin.Engine, mediaHandler *MediaHandler) {
 	{
 		public.GET("/ping", mediaHandler.HealthCheck)
 		public.POST("/upload", mediaHandler.UploadSingleImage)
+		public.DELETE("/image", mediaHandler.DeleteImage)
 	}
 }
