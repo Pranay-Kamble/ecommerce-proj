@@ -10,4 +10,5 @@ use (
 	./services/payment
 	./services/search
 	./services/email
+	services/media
 )
