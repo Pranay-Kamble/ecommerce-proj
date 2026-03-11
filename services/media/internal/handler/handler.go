@@ -19,7 +19,7 @@ func NewMediaHandler(mediaService service.MediaService) *MediaHandler {
 }
 
 func (h *MediaHandler) UploadSingleImage(c *gin.Context) {
-
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 5<<20)
 	err := c.Request.ParseMultipartForm(5 << 20)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "File is too large. Maximum size is 5MB."})
