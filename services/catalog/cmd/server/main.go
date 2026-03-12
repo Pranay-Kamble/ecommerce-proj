@@ -17,6 +17,21 @@ import (
 	"gorm.io/gorm"
 )
 
+// @title           Catalog Microservice API
+// @version         1.0
+// @description     E-commerce Catalog management including Products, Variants, Categories, and Sellers.
+
+// @contact.name    Pranay Kamble
+// @contact.email   iampranaykamble1@gmail.com
+
+// @host      localhost:8082
+// @BasePath  /api/v1/catalog
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer " followed by a space and your JWT token.
+
 func main() {
 	err := godotenv.Load(".env")
 	if err != nil {

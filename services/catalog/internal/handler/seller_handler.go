@@ -29,6 +29,19 @@ type CreateSellerRequest struct {
 	RegisteredAddress string `json:"registeredAddress"`
 }
 
+// CreateSeller @Summary      Onboard as a Seller
+// @Description  Upgrades a standard user to a Seller profile.
+// @Tags         Sellers
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Param        request  body      handler.CreateSellerRequest  true  "Seller onboarding payload"
+// @Success      201      {object}  map[string]interface{}
+// @Failure      400      {object}  map[string]interface{}
+// @Failure      401      {object}  map[string]interface{}
+// @Failure      409      {object}  map[string]interface{}
+// @Failure      500      {object}  map[string]interface{}
+// @Router       /sellers [post]
 func (h *SellerHandler) CreateSeller(c *gin.Context) {
 	var request CreateSellerRequest
 	err := c.ShouldBindJSON(&request)
@@ -68,6 +81,17 @@ func (h *SellerHandler) CreateSeller(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"seller": newSeller})
 }
 
+// GetMyProfile @Summary      Get my Seller profile
+// @Description  Retrieves the seller profile for the currently authenticated user.
+// @Tags         Sellers
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}
+// @Failure      401  {object}  map[string]interface{}
+// @Failure      404  {object}  map[string]interface{}
+// @Failure      500  {object}  map[string]interface{}
+// @Router       /sellers/me [get]
 func (h *SellerHandler) GetMyProfile(c *gin.Context) {
 	userID, exists := getUserIdFromContext(c)
 	if !exists {
