@@ -2,6 +2,7 @@ package handler
 
 import (
 	"ecommerce/pkg/logger"
+	"mime/multipart"
 	"net/http"
 
 	"ecommerce/services/media/internal/service"
@@ -50,6 +51,53 @@ func (h *MediaHandler) UploadSingleImage(c *gin.Context) {
 		"message": "Image uploaded successfully",
 		"url":     url,
 	})
+}
+
+type MultipleUploadRequest struct {
+	Folder string                  `form:"folder"`
+	Images []*multipart.FileHeader `form:"images" binding:"required"`
+}
+
+func (h *MediaHandler) UploadMultipleImages(c *gin.Context) {
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 80<<20)
+	var request MultipleUploadRequest
+
+	err := c.ShouldBind(&request)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body. Ensure 'images' is an array of files."})
+		return
+	}
+
+	files := request.Images
+	if len(files) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No image files provided"})
+		return
+	}
+	if len(files) > 15 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Too many files. Maximum is 15."})
+		return
+	}
+	for _, file := range files {
+		if file.Size > (5 << 20) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "One or more files are too large. Maximum size is 5MB each."})
+			return
+		}
+	}
+
+	folder := c.DefaultPostForm("folder", "general")
+
+	urls, failedFiles := h.mediaService.UploadImages(c.Request.Context(), files, folder)
+	if len(failedFiles) == 0 {
+		c.JSON(http.StatusCreated, gin.H{"message": "images uploaded successfully", "urls": urls})
+		return
+	}
+
+	if len(urls) == 0 {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to upload images"})
+		return
+	}
+
+	c.JSON(http.StatusMultiStatus, gin.H{"error": "failed to upload images", "urls": urls, "failedFiles": failedFiles})
 }
 
 type DeleteImageRequest struct {

@@ -18,6 +18,7 @@ import (
 type MediaService interface {
 	UploadImage(ctx context.Context, fileHeader *multipart.FileHeader, folder string) (string, error)
 	DeleteImage(ctx context.Context, fileUrl string) error
+	UploadImages(ctx context.Context, fileHeaders []*multipart.FileHeader, folder string) ([]string, []string)
 }
 
 type mediaService struct {
@@ -67,6 +68,20 @@ func (s *mediaService) UploadImage(ctx context.Context, fileHeader *multipart.Fi
 	return url, nil
 }
 
+func (s *mediaService) UploadImages(ctx context.Context, fileHeaders []*multipart.FileHeader, folder string) ([]string, []string) {
+	var urls, failedFiles []string
+	for _, fileHeader := range fileHeaders {
+		fileUrl, err := s.UploadImage(ctx, fileHeader, folder)
+		if err != nil {
+			failedFiles = append(failedFiles, fileHeader.Filename)
+		} else {
+			urls = append(urls, fileUrl)
+		}
+	}
+
+	return urls, failedFiles
+}
+
 func (s *mediaService) DeleteImage(ctx context.Context, fileUrl string) error {
 	objectKey, err := url.Parse(fileUrl)
 	if err != nil {
@@ -74,7 +89,7 @@ func (s *mediaService) DeleteImage(ctx context.Context, fileUrl string) error {
 	}
 	prefixToTrim := fmt.Sprintf("/%s/", s.s3Storage.BucketName)
 	objectKeyString := strings.TrimPrefix(objectKey.Path, prefixToTrim)
-	
+
 	err = s.s3Storage.Delete(ctx, objectKeyString)
 
 	if err != nil {
