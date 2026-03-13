@@ -2,9 +2,13 @@ package service
 
 import (
 	"context"
+	"ecommerce/pkg/broker"
+	"ecommerce/pkg/logger"
 	"ecommerce/services/catalog/internal/domain"
 	"ecommerce/services/catalog/internal/repository"
 	"fmt"
+
+	"go.uber.org/zap"
 )
 
 type SellerService interface {
@@ -15,11 +19,13 @@ type SellerService interface {
 
 type sellerService struct {
 	sellerRepo repository.SellerRepository
+	broker     *broker.RabbitMQClient
 }
 
-func NewSellerService(sellerRepo repository.SellerRepository) SellerService {
+func NewSellerService(sellerRepo repository.SellerRepository, broker *broker.RabbitMQClient) SellerService {
 	return &sellerService{
 		sellerRepo: sellerRepo,
+		broker:     broker,
 	}
 }
 
@@ -42,6 +48,16 @@ func (s *sellerService) CreateSeller(c context.Context, seller *domain.Seller) e
 	if err != nil {
 		return fmt.Errorf("service: failed to create seller: %w", err)
 	}
+
+	event := map[string]interface{}{
+		"user_id": seller.UserID,
+		"status":  "onboarded",
+	}
+	err = s.broker.Publish(c, "user_events", "user.onboarded", event)
+	if err != nil {
+		logger.Error("service: failed to publish user onboarded event: %v", zap.Error(err))
+	}
+
 	return nil
 }
 
