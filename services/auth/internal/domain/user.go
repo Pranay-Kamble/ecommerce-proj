@@ -18,7 +18,8 @@ type User struct {
 	Provider   string `gorm:"default:'email'" json:"provider"`
 	ProviderID string `gorm:"index" json:"-"`
 
-	IsVerified bool `gorm:"default:false" json:"isVerified"`
+	IsVerified  bool `gorm:"default:false" json:"isVerified"`
+	IsOnboarded bool `gorm:"default:false" json:"isOnboarded"`
 
 	CreatedAt time.Time      `json:"createdAt"`
 	UpdatedAt time.Time      `json:"updatedAt"`

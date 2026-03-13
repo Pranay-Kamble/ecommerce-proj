@@ -1,6 +1,7 @@
 package main
 
 import (
+	"ecommerce/pkg/broker"
 	"ecommerce/pkg/database"
 	"ecommerce/pkg/logger"
 	"ecommerce/services/auth/internal/client"
@@ -9,6 +10,7 @@ import (
 	"ecommerce/services/auth/internal/repository"
 	"ecommerce/services/auth/internal/service"
 	"ecommerce/services/auth/internal/utils"
+	"ecommerce/services/auth/internal/workers"
 	"log"
 	"os"
 
@@ -80,9 +82,37 @@ func main() {
 		logger.Fatal("main: failed to run database migrations", zap.Error(err))
 	}
 
+	rabbitMQURL := os.Getenv("RABBITMQ_URL")
+	if rabbitMQURL == "" {
+		rabbitMQURL = "amqp://guest:guest@localhost:5672/"
+	}
+
 	userRepo := repository.NewUserRepository(pg.DB)
 	tokenRepo := repository.NewTokenRepository(pg.DB)
 	otpRepo := repository.NewOTPRepository(rd.Redis)
+
+	rabbitClient, err := broker.NewRabbitMQClient(rabbitMQURL)
+	if err != nil {
+		logger.Fatal("main: failed to connect to RabbitMQ", zap.Error(err))
+	}
+	defer rabbitClient.Close()
+
+	err = rabbitClient.DeclareExchange("user_events", "topic")
+	if err != nil {
+		logger.Fatal("main: failed to declare exchange", zap.Error(err))
+	}
+
+	userQueue, err := rabbitClient.DeclareQueue("auth_queue")
+	if err != nil {
+		logger.Fatal("main: failed to declare RabbitMQ queue", zap.Error(err))
+	}
+
+	err = rabbitClient.BindQueue(userQueue.Name, "user_events", "seller.onboarded")
+	if err != nil {
+		logger.Fatal("main: failed to bind RabbitMQ queue", zap.Error(err))
+	}
+
+	workers.StartUserEventsConsumer(rabbitClient, userRepo, userQueue.Name)
 
 	authService := service.NewAuthService(userRepo, tokenRepo, otpRepo)
 
