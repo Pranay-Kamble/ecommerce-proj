@@ -1,6 +1,7 @@
 package main
 
 import (
+	"ecommerce/pkg/broker"
 	"ecommerce/pkg/logger"
 	"ecommerce/services/catalog/internal/domain"
 	"log"
@@ -76,13 +77,30 @@ func main() {
 		logger.Fatal("Failed to auto-migrate database schema: %v", zap.Error(err))
 	}
 
+	rabbitMQURL := os.Getenv("RABBITMQ_URL")
+	if rabbitMQURL == "" {
+		rabbitMQURL = "amqp://guest:guest@localhost:5672/"
+	}
+
+	rabbitMQ, err := broker.NewRabbitMQClient(rabbitMQURL)
+	if err != nil {
+		log.Fatalf("Failed to connect to RabbitMQ: %v", err)
+	}
+
+	defer rabbitMQ.Close()
+
+	err = rabbitMQ.DeclareExchange("user_events", "topic")
+	if err != nil {
+		log.Fatalf("Failed to declare exchange: %v", err)
+	}
+
 	categoryRepo := repository.NewCategoryRepository(db)
 	sellerRepo := repository.NewSellerRepository(db)
 	productRepo := repository.NewProductRepository(db)
 	variantRepo := repository.NewProductVariantRepository(db)
 
 	categoryService := service.NewCategoryService(categoryRepo)
-	sellerService := service.NewSellerService(sellerRepo)
+	sellerService := service.NewSellerService(sellerRepo, rabbitMQ)
 	productService := service.NewProductService(categoryRepo, productRepo, sellerRepo)
 	variantService := service.NewVariantService(variantRepo, productRepo, sellerRepo)
 
