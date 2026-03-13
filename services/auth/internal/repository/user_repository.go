@@ -11,6 +11,7 @@ import (
 
 type UserRepository interface {
 	CreateUser(ctx context.Context, user *domain.User) error
+	UpdateOnboardingStatus(ctx context.Context, userID string, isOnboarded bool) error
 	GetUserByEmail(ctx context.Context, email string) (*domain.User, error)
 	GetUserByID(ctx context.Context, id string) (*domain.User, error)
 	GetUserByProviderID(ctx context.Context, providerID string) (*domain.User, error)
@@ -78,6 +79,15 @@ func (u *userRepository) UpdateVerified(ctx context.Context, userID string) erro
 		return fmt.Errorf("repository: could not update verified user: %w", err)
 	}
 
+	return nil
+}
+
+func (u *userRepository) UpdateOnboardingStatus(ctx context.Context, userID string, isOnboarded bool) error {
+	_, err := gorm.G[domain.User](u.db).Where("id = ?", userID).Update(ctx, "is_onboarded", isOnboarded)
+
+	if err != nil {
+		return fmt.Errorf("repository: could not update onboarding status: %w", err)
+	}
 	return nil
 }
 
