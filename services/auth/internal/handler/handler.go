@@ -173,7 +173,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	h.issueTokensAndRespond(c, userInfo.ID, userInfo.Email, userInfo.Role, "User logged in", http.StatusOK)
+	h.issueTokensAndRespond(c, userInfo.ID, userInfo.Email, userInfo.Role, userInfo.IsOnboarded, "User logged in", http.StatusOK)
 }
 
 // Refresh godoc
@@ -211,7 +211,7 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 		return
 	}
 
-	jwt, err := utils.GetJWT(tokenUser.ID, tokenUser.Email, tokenUser.Role)
+	jwt, err := utils.GetJWT(tokenUser.ID, tokenUser.Email, tokenUser.Role, tokenUser.IsOnboarded)
 	if err != nil {
 		logger.Error("handler: failed to generate JWT", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
@@ -289,7 +289,7 @@ func (h *AuthHandler) Verify(c *gin.Context) {
 		return
 	}
 
-	h.issueTokensAndRespond(c, user.ID, user.Email, user.Role, "User logged in", http.StatusOK)
+	h.issueTokensAndRespond(c, user.ID, user.Email, user.Role, user.IsOnboarded, "User logged in", http.StatusOK)
 	logger.Info("handler: successfully registered user", zap.String("id", user.ID))
 }
 
@@ -338,8 +338,8 @@ func (h *AuthHandler) ResendOTP(c *gin.Context) {
 }
 
 // issueTokensAndRespond is an internal helper, so it does NOT get Swagger annotations.
-func (h *AuthHandler) issueTokensAndRespond(c *gin.Context, userID, email, role, successMsg string, statusCode int) {
-	jwt, err := utils.GetJWT(userID, email, role)
+func (h *AuthHandler) issueTokensAndRespond(c *gin.Context, userID, email, role string, isOnboarded bool, successMsg string, statusCode int) {
+	jwt, err := utils.GetJWT(userID, email, role, isOnboarded)
 	if err != nil {
 		logger.Error("handler: failed to generate JWT", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
@@ -445,7 +445,7 @@ func (h *AuthHandler) GoogleCallback(c *gin.Context) {
 		return
 	}
 
-	h.issueTokensAndRespond(c, user.ID, user.Email, user.Role, "User logged in", http.StatusCreated)
+	h.issueTokensAndRespond(c, user.ID, user.Email, user.Role, user.IsOnboarded, "User logged in", http.StatusCreated)
 }
 
 // GetPublicKey godoc
