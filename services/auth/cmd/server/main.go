@@ -84,7 +84,7 @@ func main() {
 
 	rabbitMQURL := os.Getenv("RABBITMQ_URL")
 	if rabbitMQURL == "" {
-		rabbitMQURL = "amqp://guest:guest@localhost:5672/"
+		rabbitMQURL = "amqp://admin:password@localhost:5672/"
 	}
 
 	userRepo := repository.NewUserRepository(pg.DB)
