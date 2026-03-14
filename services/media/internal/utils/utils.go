@@ -19,6 +19,8 @@ func GetPublicKey() error {
 		return errors.New("no auth service url found")
 	}
 
+	authServiceURL += "/api/v1/auth/public-key"
+
 	response, err := http.Get(authServiceURL)
 	if err != nil {
 		return fmt.Errorf("middleware: failed to get public key from auth service: %w", err)
