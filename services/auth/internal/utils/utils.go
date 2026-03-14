@@ -89,17 +89,18 @@ func Init(length int) error {
 	return nil
 }
 
-func GetJWT(ID, email, role string) (string, error) {
+func GetJWT(ID, email, role string, isOnboarded bool) (string, error) {
 	if privateKey == nil {
 		return "", errors.New("utils: private key is empty")
 	}
 
 	claims := jwt.MapClaims{
-		"id":    ID,
-		"email": email,
-		"role":  role,
-		"iat":   time.Now().Unix(),
-		"exp":   time.Now().Add(15 * time.Minute).Unix(),
+		"id":           ID,
+		"email":        email,
+		"role":         role,
+		"is_onboarded": isOnboarded,
+		"iat":          time.Now().Unix(),
+		"exp":          time.Now().Add(15 * time.Minute).Unix(),
 	}
 
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
