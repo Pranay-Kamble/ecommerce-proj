@@ -5,6 +5,7 @@ import (
 	"ecommerce/services/media/internal/handler"
 	"ecommerce/services/media/internal/service"
 	"ecommerce/services/media/internal/storage"
+	"ecommerce/services/media/internal/utils"
 	"log"
 	"os"
 
@@ -29,6 +30,12 @@ func main() {
 
 	mediaService := service.NewMediaService(s3)
 	mediaHandler := handler.NewMediaHandler(mediaService)
+
+	err = utils.GetPublicKey()
+
+	if err != nil {
+		logger.Fatal("Failed to get public key from auth service: " + err.Error())
+	}
 
 	router := gin.Default()
 	handler.RegisterRoutes(router, mediaHandler)

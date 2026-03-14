@@ -10,8 +10,13 @@ func RegisterRoutes(router *gin.Engine, mediaHandler *MediaHandler) {
 	public := v1.Group("/")
 	{
 		public.GET("/ping", mediaHandler.HealthCheck)
-		public.POST("/upload", mediaHandler.UploadSingleImage)
-		public.POST("/upload-multiple", mediaHandler.UploadMultipleImages)
-		public.DELETE("/image", mediaHandler.DeleteImage)
+	}
+
+	seller := v1.Group("/")
+	seller.Use(RequireSeller())
+	{
+		seller.POST("/upload", mediaHandler.UploadSingleImage)
+		seller.POST("/upload-multiple", mediaHandler.UploadMultipleImages)
+		seller.DELETE("/image", mediaHandler.DeleteImage)
 	}
 }
