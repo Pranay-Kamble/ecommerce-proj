@@ -13,6 +13,20 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// @title           E-Commerce Media Microservice API
+// @version         1.0
+// @description     Media upload and management service for sellers.
+// @termsOfService  http://swagger.io/terms/
+
+// @contact.name   Pranay Kamble
+// @contact.email  iampranaykamble1@gmail.com
+
+// @host      localhost:8083
+// @BasePath  /api/v1/media
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 func main() {
 	err := godotenv.Load()
 	if err != nil {

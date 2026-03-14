@@ -1,0 +1,192 @@
+basePath: /api/v1/media
+definitions:
+  handler.DeleteImageRequest:
+    properties:
+      url:
+        example: https://my-bucket.s3.amazonaws.com/image.jpg
+        type: string
+    required:
+    - url
+    type: object
+host: localhost:8083
+info:
+  contact:
+    email: iampranaykamble1@gmail.com
+    name: Pranay Kamble
+  description: Media upload and management service for sellers.
+  termsOfService: http://swagger.io/terms/
+  title: E-Commerce Media Microservice API
+  version: "1.0"
+paths:
+  /image:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes an image from the storage provider using its absolute URL.
+      parameters:
+      - description: The exact URL of the image to delete
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.DeleteImageRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Image deleted successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request body or malformed URL
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete an image
+      tags:
+      - Media
+  /ping:
+    get:
+      description: Use this to check if the Media service is active and running.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: pong
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Health check the server
+      tags:
+      - System
+  /upload:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Uploads a single image (jpeg, png, webp) to a specified folder.
+        Maximum file size is 5MB.
+      parameters:
+      - description: The image file to upload (Max 5MB)
+        in: formData
+        name: image
+        required: true
+        type: file
+      - description: 'Target folder name (default: ''general'')'
+        in: formData
+        name: folder
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Image uploaded successfully with URL
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad request (file too large, no image provided)
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized (missing or invalid JWT)
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden (not a seller or incomplete onboarding)
+          schema:
+            additionalProperties: true
+            type: object
+        "415":
+          description: Unsupported media type
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Upload a single image
+      tags:
+      - Media
+  /upload-multiple:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Uploads a batch of up to 15 images. Maximum size per image is 5MB.
+      parameters:
+      - description: Array of image files to upload (Max 15 files)
+        in: formData
+        name: images
+        required: true
+        type: file
+      - description: 'Target folder name (default: ''general'')'
+        in: formData
+        name: folder
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: All images uploaded successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "207":
+          description: Multi-Status (Some uploads succeeded, some failed)
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad request (files too large, too many files)
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Upload multiple images
+      tags:
+      - Media
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
