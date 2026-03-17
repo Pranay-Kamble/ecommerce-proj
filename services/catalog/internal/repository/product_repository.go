@@ -19,6 +19,7 @@ type ProductRepository interface {
 	GetBySellerID(ctx context.Context, sellerID uuid.UUID, limit, offset int) ([]*domain.Product, error)
 	GetBySlug(ctx context.Context, slug string) (*domain.Product, error)
 	GetByCategoryID(ctx context.Context, categoryID uuid.UUID, limit, offset int) ([]*domain.Product, error)
+	GetVariantsByPublicIDs(ctx context.Context, publicIDs []string) ([]*domain.Variant, error)
 
 	Delete(ctx context.Context, id uuid.UUID) error
 	Update(ctx context.Context, product *domain.Product) error
@@ -136,4 +137,15 @@ func (p *productRepository) GetByCategoryID(ctx context.Context, categoryID uuid
 		return nil, fmt.Errorf("repository: failed to get products by category ID: %w", err)
 	}
 	return products, nil
+}
+
+func (p *productRepository) GetVariantsByPublicIDs(ctx context.Context, publicIDs []string) ([]*domain.Variant, error) {
+	var variants []*domain.Variant
+
+	variants, err := gorm.G[*domain.Variant](p.db).Where("public_id IN (?)", publicIDs).Find(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("repository: failed to get variants by IDs: %w", err)
+	}
+
+	return variants, nil
 }

@@ -15,6 +15,7 @@ type ProductService interface {
 	DeleteProduct(ctx context.Context, sellerUserID string, productPublicID string) error
 
 	GetProductByPublicID(ctx context.Context, publicID string) (*domain.Product, error)
+	VerifyVariants(ctx context.Context, variantIDs []string) ([]*domain.Variant, error)
 
 	ListAllProducts(ctx context.Context, page, limit int) ([]*domain.Product, error)
 	ListProductsByCategory(ctx context.Context, categoryPublicID string, limit, offset int) ([]*domain.Product, error)
@@ -200,4 +201,17 @@ func (p *productService) checkProductValidity(title, description, brand string) 
 	}
 
 	return nil
+}
+
+func (p *productService) VerifyVariants(ctx context.Context, variantIDs []string) ([]*domain.Variant, error) {
+	if len(variantIDs) == 0 {
+		return nil, nil
+	}
+
+	variants, err := p.productRepo.GetVariantsByPublicIDs(ctx, variantIDs)
+	if err != nil {
+		return nil, fmt.Errorf("service: failed to verify variants: %w", err)
+	}
+
+	return variants, nil
 }
