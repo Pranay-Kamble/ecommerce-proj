@@ -2,11 +2,13 @@ package service
 
 import (
 	"context"
-	"ecommerce/pkg/logger"
 	"fmt"
 
+	"ecommerce/pkg/logger"
 	"ecommerce/services/order/internal/domain"
 	"ecommerce/services/order/internal/repository"
+
+	pb "ecommerce/pkg/protobufs/catalog"
 
 	"github.com/sixafter/nanoid"
 )
@@ -20,13 +22,28 @@ type OrderService interface {
 type orderService struct {
 	orderRepo repository.OrderRepository
 	cartRepo  repository.CartRepository
+
+	nanoGen       nanoid.Interface
+	catalogClient pb.CatalogServiceClient
 }
 
-func NewOrderService(orderRepo repository.OrderRepository, cartRepo repository.CartRepository) OrderService {
-	return &orderService{
-		orderRepo: orderRepo,
-		cartRepo:  cartRepo,
+func NewOrderService(
+	orderRepo repository.OrderRepository,
+	cartRepo repository.CartRepository,
+	catalogClient pb.CatalogServiceClient,
+) (OrderService, error) {
+
+	gen, err := nanoid.NewGenerator(nanoid.WithAlphabet("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"))
+	if err != nil {
+		return nil, fmt.Errorf("service: failed to initialize nanoid generator: %w", err)
 	}
+
+	return &orderService{
+		orderRepo:     orderRepo,
+		cartRepo:      cartRepo,
+		nanoGen:       gen,
+		catalogClient: catalogClient,
+	}, nil
 }
 
 func (s *orderService) Checkout(ctx context.Context, userID string, name, phone string, address domain.Address) (*domain.Order, error) {
@@ -39,23 +56,43 @@ func (s *orderService) Checkout(ctx context.Context, userID string, name, phone 
 		return nil, fmt.Errorf("service: cannot checkout with an empty cart")
 	}
 
+	var productIDs []string
+	for _, item := range cart.Items {
+		productIDs = append(productIDs, item.ProductID)
+	}
+
+	//gRPC call to get real product info if any of them are updated
+	catalogResp, err := s.catalogClient.CheckPrices(ctx, &pb.CheckPricesRequest{
+		ProductIds: productIDs,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("service: failed to communicate with catalog: %w", err)
+	}
+
+	verifiedProducts := make(map[string]*pb.ProductCheck)
+	for _, p := range catalogResp.Products {
+		verifiedProducts[p.ProductId] = p
+	}
+
 	var totalAmount float64
 	var orderItems []domain.OrderItem
 
 	for _, item := range cart.Items {
-		//In the next phase, we can make a gRPC call to Catalog
-		// to verify this price hasn't been maliciously manipulated by the frontend!
+		vp, exists := verifiedProducts[item.ProductID]
 
-		totalAmount += item.Price * float64(item.Quantity)
+		if !exists || !vp.IsAvailable {
+			return nil, fmt.Errorf("service: product %s is currently unavailable", item.ProductID)
+		}
+		totalAmount += vp.Price * float64(item.Quantity)
 
 		orderItems = append(orderItems, domain.OrderItem{
 			ProductID: item.ProductID,
 			Quantity:  item.Quantity,
-			Price:     item.Price,
+			Price:     vp.Price,
 		})
 	}
 
-	id, err := nanoid.NewWithLength(8)
+	id, err := s.nanoGen.NewWithLength(8)
 	if err != nil {
 		return nil, fmt.Errorf("service: failed to generate order number: %w", err)
 	}
@@ -65,7 +102,7 @@ func (s *orderService) Checkout(ctx context.Context, userID string, name, phone 
 		PublicID:        orderNumber,
 		UserID:          userID,
 		TotalAmount:     totalAmount,
-		Status:          "paid",
+		Status:          "pending",
 		ShippingName:    name,
 		ShippingPhone:   phone,
 		ShippingAddress: address.AddressLine,
@@ -80,7 +117,7 @@ func (s *orderService) Checkout(ctx context.Context, userID string, name, phone 
 	}
 
 	if err = s.cartRepo.ClearCart(ctx, userID); err != nil {
-		logger.Error("warning: failed to clear cart after successful checkout for user %s" + userID)
+		logger.Error(fmt.Sprintf("warning: failed to clear cart after successful checkout for user %s", userID))
 	}
 
 	return order, nil
