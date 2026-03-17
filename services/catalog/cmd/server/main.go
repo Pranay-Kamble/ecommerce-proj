@@ -5,11 +5,17 @@ import (
 	"ecommerce/pkg/logger"
 	"ecommerce/services/catalog/internal/domain"
 	"log"
+	"net"
 	"os"
 
 	"ecommerce/services/catalog/internal/handler"
 	"ecommerce/services/catalog/internal/repository"
 	"ecommerce/services/catalog/internal/service"
+
+	pb "ecommerce/pkg/protobufs/catalog"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -104,6 +110,32 @@ func main() {
 	productService := service.NewProductService(categoryRepo, productRepo, sellerRepo)
 	variantService := service.NewVariantService(variantRepo, productRepo, sellerRepo)
 
+	grpcHandler := handler.NewCatalogGrpcServer(productService)
+
+	go func() {
+		grpcPort := os.Getenv("GRPC_PORT")
+		if grpcPort == "" {
+			grpcPort = "50051"
+		}
+
+		listener, innerError := net.Listen("tcp", ":"+grpcPort)
+		if innerError != nil {
+			logger.Fatal("Failed to listen on gRPC port", zap.Error(err))
+		}
+
+		grpcServer := grpc.NewServer()
+		pb.RegisterCatalogServiceServer(grpcServer, grpcHandler)
+
+		reflection.Register(grpcServer)
+
+		log.Printf("Catalog gRPC Server running on port %s", grpcPort)
+		innerError = grpcServer.Serve(listener)
+
+		if innerError != nil {
+			logger.Fatal("Failed to serve gRPC", zap.Error(err))
+		}
+	}()
+
 	categoryHandler := handler.NewCategoryHandler(categoryService)
 	sellerHandler := handler.NewSellerHandler(sellerService)
 	productHandler := handler.NewProductHandler(productService, sellerService, categoryService)
@@ -125,7 +157,7 @@ func main() {
 		port = "8082"
 	}
 
-	log.Printf("Catalog Microservice running on port %s", port)
+	log.Printf("Catalog REST Microservice running on port %s", port)
 	err = router.Run(":" + port)
 	if err != nil {
 		log.Fatalf("Failed to start server: %v", err)
