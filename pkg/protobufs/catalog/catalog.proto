@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package catalog;
+option go_package = "ecommerce/pkg/pb/catalog";
+
+
+service CatalogService {
+  rpc CheckPrices(CheckPricesRequest) returns (CheckPricesResponse) {}
+}
+
+message CheckPricesRequest {
+  repeated string product_ids = 1;
+}
+
+message ProductCheck {
+  string product_id = 1;
+  double price = 2;
+  bool is_available = 3;
+}
+
+message CheckPricesResponse {
+  repeated ProductCheck products = 1;
+}
