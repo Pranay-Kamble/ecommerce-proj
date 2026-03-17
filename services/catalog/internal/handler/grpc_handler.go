@@ -5,6 +5,9 @@ import (
 
 	pb "ecommerce/pkg/protobufs/catalog"
 	"ecommerce/services/catalog/internal/service"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type CatalogGrpcServer struct {
@@ -17,9 +20,18 @@ func NewCatalogGrpcServer(productService service.ProductService) *CatalogGrpcSer
 }
 
 func (s *CatalogGrpcServer) CheckPrices(ctx context.Context, req *pb.CheckPricesRequest) (*pb.CheckPricesResponse, error) {
+
+	if req == nil || len(req.ProductIds) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "product_ids array cannot be empty")
+	}
+
+	if len(req.ProductIds) > 100 {
+		return nil, status.Error(codes.InvalidArgument, "cannot process more than 100 variants per request")
+	}
+
 	variants, err := s.productService.VerifyVariants(ctx, req.ProductIds)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "database error while verifying variants: %v", err)
 	}
 
 	var verifiedProducts []*pb.ProductCheck
