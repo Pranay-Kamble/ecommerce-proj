@@ -185,7 +185,7 @@ const file_pkg_protobufs_catalog_catalog_proto_rawDesc = "" +
 	"\x13CheckPricesResponse\x121\n" +
 	"\bproducts\x18\x01 \x03(\v2\x15.catalog.ProductCheckR\bproducts2\\\n" +
 	"\x0eCatalogService\x12J\n" +
-	"\vCheckPrices\x12\x1b.catalog.CheckPricesRequest\x1a\x1c.catalog.CheckPricesResponse\"\x00B\x1aZ\x18ecommerce/pkg/pb/catalogb\x06proto3"
+	"\vCheckPrices\x12\x1b.catalog.CheckPricesRequest\x1a\x1c.catalog.CheckPricesResponse\"\x00B!Z\x1fecommerce/pkg/protobufs/catalogb\x06proto3"
 
 var (
 	file_pkg_protobufs_catalog_catalog_proto_rawDescOnce sync.Once
