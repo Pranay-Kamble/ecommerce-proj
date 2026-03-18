@@ -16,7 +16,7 @@ import (
 
 func main() {
 
-	godotenv.Load(".env")
+	_ = godotenv.Load(".env")
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
 		dsn = "host=localhost user=admin password=password dbname=catalog_db port=5432 sslmode=disable"
@@ -121,6 +121,27 @@ func main() {
 			db.Create(&variant)
 		}
 	}
+
+	log.Println("Extra items for gRPC test")
+
+	testProduct := domain.Product{
+		CategoryID:  leafCategories[0].ID,
+		SellerID:    sellers[0].ID,
+		Title:       "E2E Test Product",
+		Brand:       "System Test",
+		Description: "Used for cross-service gRPC testing",
+	}
+	db.Create(&testProduct)
+
+	testVariant := domain.Variant{
+		PublicID:  "var_test_123",
+		ProductID: testProduct.ID,
+		Title:     "E2E Test Variant",
+		SKU:       "TEST-SKU-999",
+		Price:     1500.00,
+		Inventory: 50,
+	}
+	db.Create(&testVariant)
 
 	log.Println("Database successfully seeded.")
 }
