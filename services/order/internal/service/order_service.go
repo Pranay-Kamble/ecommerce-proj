@@ -58,7 +58,7 @@ func (s *orderService) Checkout(ctx context.Context, userID string, name, phone 
 
 	var productIDs []string
 	for _, item := range cart.Items {
-		productIDs = append(productIDs, item.ProductID)
+		productIDs = append(productIDs, item.ProductVariantID)
 	}
 
 	//gRPC call to get real product info if any of them are updated
@@ -78,15 +78,15 @@ func (s *orderService) Checkout(ctx context.Context, userID string, name, phone 
 	var orderItems []domain.OrderItem
 
 	for _, item := range cart.Items {
-		vp, exists := verifiedProducts[item.ProductID]
+		vp, exists := verifiedProducts[item.ProductVariantID]
 
 		if !exists || !vp.IsAvailable {
-			return nil, fmt.Errorf("service: product %s is currently unavailable", item.ProductID)
+			return nil, fmt.Errorf("service: product %s is currently unavailable", item.ProductVariantID)
 		}
 		totalAmount += vp.Price * float64(item.Quantity)
 
 		orderItems = append(orderItems, domain.OrderItem{
-			ProductID: item.ProductID,
+			ProductID: item.ProductVariantID,
 			Quantity:  item.Quantity,
 			Price:     vp.Price,
 		})

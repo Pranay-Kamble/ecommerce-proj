@@ -35,7 +35,7 @@ func (s *cartService) AddItem(ctx context.Context, userID string, newItem domain
 
 	itemExists := false
 	for i, item := range cart.Items {
-		if item.ProductID == newItem.ProductID {
+		if item.ProductVariantID == newItem.ProductVariantID {
 			cart.Items[i].Quantity += newItem.Quantity
 			cart.Items[i].Price = newItem.Price
 			itemExists = true
@@ -63,7 +63,7 @@ func (s *cartService) RemoveItem(ctx context.Context, userID string, productID s
 
 	var updatedItems []domain.CartItem
 	for _, item := range cart.Items {
-		if item.ProductID != productID {
+		if item.ProductVariantID != productID {
 			updatedItems = append(updatedItems, item)
 		}
 	}
