@@ -43,3 +43,10 @@ func RequireUser() gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+func MockMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Set("user_id", "usr_test_999")
+		c.Next()
+	}
+}

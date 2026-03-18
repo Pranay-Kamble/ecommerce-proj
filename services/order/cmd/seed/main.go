@@ -6,44 +6,48 @@ import (
 	"log"
 	"os"
 
-	"ecommerce/pkg/database"
-
+	"github.com/go-redis/redis/v8"
 	"github.com/joho/godotenv"
 )
 
 type CartItem struct {
-	ProductID string  `json:"product_id"` // This maps to the Variant Public ID
-	Quantity  int     `json:"quantity"`
-	Price     float64 `json:"price"`
+	ProductVariantID string  `json:"product_variant_id"`
+	Quantity         int     `json:"quantity"`
+	Price            float64 `json:"price"`
 }
 
 type Cart struct {
-	Items []CartItem `json:"items"`
+	UserID string     `json:"user_id"`
+	Items  []CartItem `json:"items"`
 }
 
 func main() {
 	_ = godotenv.Load(".env")
-	redisURL := os.Getenv("REDIS_URL")
-	if redisURL == "" {
-		redisURL = "localhost:6379"
+
+	redisDSN := os.Getenv("REDIS_DSN")
+	if redisDSN == "" {
+		redisDSN = "redis://localhost:6379/1"
 	}
 
-	rdb := &database.Redis{}
-	err := rdb.Connect(redisURL)
+	opt, err := redis.ParseURL(redisDSN)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Failed to parse Redis DSN: %v", err)
 	}
 
-	log.Println("Start Order Redis Seeding")
+	rdb := redis.NewClient(opt)
+	ctx := context.Background()
+
+	log.Println("Start Order Redis Seeding...")
 
 	testUserID := "usr_test_999"
 
 	mockCart := Cart{
+		UserID: testUserID,
 		Items: []CartItem{
 			{
-				ProductID: "var_test_123",
-				Quantity:  2,
-				Price:     1.00, //keep price intentionally small, so the gRPC can overwrite this
+				ProductVariantID: "var_test_123",
+				Quantity:         2,
+				Price:            1.00,
 			},
 		},
 	}
@@ -54,11 +58,10 @@ func main() {
 	}
 
 	redisKey := "cart:" + testUserID
-	ctx := context.Background()
-	err = rdb.Redis.Set(ctx, redisKey, cartBytes, 0).Err()
+	err = rdb.Set(ctx, redisKey, cartBytes, 0).Err()
 	if err != nil {
 		log.Fatalf("Failed to save to Redis: %v", err)
 	}
 
-	log.Printf("USER ID: %s has a cart with fake prices ready for checkout.", testUserID)
+	log.Printf("USER ID: %s has a cart ready for checkout.", testUserID)
 }
