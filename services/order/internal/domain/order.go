@@ -9,7 +9,7 @@ import (
 type Order struct {
 	ID          string  `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"-"`
 	PublicID    string  `gorm:"type:varchar(20);uniqueIndex;not null" json:"id"`
-	UserID      string  `gorm:"type:string(21);not null;index" json:"user_id"`
+	UserID      string  `gorm:"type:varchar(21);not null;index" json:"user_id"`
 	TotalAmount float64 `gorm:"not null" json:"total_amount"`
 	Status      string  `gorm:"type:varchar(20);default:'pending'" json:"status"`
 
@@ -31,7 +31,7 @@ type OrderItem struct {
 	ID      string `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"-"`
 	OrderID string `gorm:"type:uuid;not null;index" json:"-"`
 
-	ProductID string  `gorm:"type:string(25);not null" json:"product_id"`
+	ProductID string  `gorm:"type:varchar(25);not null" json:"product_id"`
 	Quantity  int     `gorm:"not null" json:"quantity"`
 	Price     float64 `gorm:"not null" json:"price"`
 }

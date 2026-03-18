@@ -46,7 +46,7 @@ func (h *CartHandler) AddItem(c *gin.Context) {
 		return
 	}
 
-	if req.ProductID == "" || req.Quantity <= 0 {
+	if req.ProductVariantID == "" || req.Quantity <= 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "product_id and a valid quantity are required"})
 		return
 	}

@@ -1,9 +1,9 @@
 package domain
 
 type CartItem struct {
-	ProductID string  `json:"product_id"`
-	Quantity  int     `json:"quantity"`
-	Price     float64 `json:"price"`
+	ProductVariantID string  `json:"product_variant_id"`
+	Quantity         int     `json:"quantity"`
+	Price            float64 `json:"price"`
 }
 
 type Cart struct {
