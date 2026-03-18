@@ -9,6 +9,7 @@ func RegisterRoutes(router *gin.Engine, cartHandler *CartHandler, customerHandle
 	v1 := router.Group("/api/v1")
 
 	v1.Use(RequireUser())
+	//v1.Use(MockMiddleware())
 	{
 		v1.GET("/cart", cartHandler.GetCart)
 		v1.POST("/cart/add", cartHandler.AddItem)
