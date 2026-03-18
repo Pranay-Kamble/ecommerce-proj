@@ -1,12 +1,17 @@
 package handler
 
 import (
+	"ecommerce/pkg/logger"
 	"net/http"
+	"strings"
 
 	"ecommerce/services/order/internal/domain"
 	"ecommerce/services/order/internal/service"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type OrderHandler struct {
@@ -45,14 +50,40 @@ func (h *OrderHandler) Checkout(c *gin.Context) {
 		State:       req.State,
 		ZipCode:     req.ZipCode,
 	}
-
+	
 	order, err := h.orderService.Checkout(c.Request.Context(), userID, req.Name, req.Phone, shippingAddress)
 	if err != nil {
-		if err.Error() == "service: cannot checkout with an empty cart" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		if strings.Contains(err.Error(), "empty cart") {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Your cart is empty. Please add items before checking out."})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "checkout failed", "details": err.Error()})
+
+		if strings.Contains(err.Error(), "unavailable") || strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error":   "One or more items in your cart are currently unavailable.",
+				"details": err.Error(),
+			})
+			return
+		}
+		if st, ok := status.FromError(err); ok {
+			switch st.Code() {
+			case codes.Unavailable:
+				c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Product catalog is temporarily offline. Please try again in a few minutes."})
+				return
+			case codes.InvalidArgument:
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid checkout payload.", "details": st.Message()})
+				return
+			case codes.DeadlineExceeded:
+				c.JSON(http.StatusGatewayTimeout, gin.H{"error": "Checkout timed out while verifying prices. Please try again."})
+				return
+			}
+		}
+
+		logger.Error("Failed to checkout.", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "An unexpected error occurred during checkout.",
+			"details": err.Error(),
+		})
 		return
 	}
 

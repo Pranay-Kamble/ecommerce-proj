@@ -15,6 +15,11 @@ import (
 	"ecommerce/services/order/internal/handler"
 	"ecommerce/services/order/internal/repository"
 	"ecommerce/services/order/internal/service"
+
+	pb "ecommerce/pkg/protobufs/catalog"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 func main() {
@@ -65,10 +70,23 @@ func main() {
 	customerRepo := repository.NewCustomerRepository(pg.DB)
 	orderRepo := repository.NewOrderRepository(pg.DB)
 
+	catalogGrpcURL := os.Getenv("CATALOG_GRPC_URL")
+	if catalogGrpcURL == "" {
+		catalogGrpcURL = "localhost:50051"
+	}
+
+	catalogConn, err := grpc.NewClient(catalogGrpcURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		logger.Fatal("Failed to connect to Catalog gRPC server", zap.Error(err))
+	}
+	defer catalogConn.Close()
+
+	catalogClient := pb.NewCatalogServiceClient(catalogConn)
+
 	cartSvc := service.NewCartService(cartRepo)
 	customerSvc := service.NewCustomerService(customerRepo)
 
-	orderSvc := service.NewOrderService(orderRepo, cartRepo)
+	orderSvc, err := service.NewOrderService(orderRepo, cartRepo, catalogClient)
 	if err != nil {
 		logger.Fatal("Failed to initialize order service", zap.Error(err))
 	}
