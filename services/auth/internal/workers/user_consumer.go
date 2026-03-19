@@ -37,10 +37,16 @@ func StartUserEventsConsumer(r *broker.RabbitMQClient, userRepo repository.UserR
 				err = userRepo.UpdateOnboardingStatus(ctx, message.UserID, true)
 				if err != nil {
 					logger.Error("workers: failed to update onboarding status", zap.Error(err))
-					_ = event.Ack(false)
-					continue
+				} else {
+					logger.Info("workers: successfully onboarded seller", zap.String("user_id", message.UserID))
 				}
-				logger.Info("workers: successfully onboarded seller", zap.String("user_id", message.UserID))
+			} else if (event.RoutingKey == "customer.onboarded") && message.Status == "onboarded" {
+				err = userRepo.UpdateOnboardingStatus(ctx, message.UserID, true)
+				if err != nil {
+					logger.Error("workers: failed to update onboarding status", zap.Error(err))
+				} else {
+					logger.Info("workers: successfully onboarded customer", zap.String("user_id", message.UserID))
+				}
 			}
 
 			_ = event.Ack(false)
