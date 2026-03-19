@@ -9,6 +9,7 @@ import (
 	"github.com/joho/godotenv"
 	"go.uber.org/zap"
 
+	"ecommerce/pkg/broker"
 	"ecommerce/pkg/database"
 	"ecommerce/pkg/logger"
 	"ecommerce/services/order/internal/domain"
@@ -84,7 +85,25 @@ func main() {
 	catalogClient := pb.NewCatalogServiceClient(catalogConn)
 
 	cartSvc := service.NewCartService(cartRepo)
-	customerSvc := service.NewCustomerService(customerRepo)
+
+	rabbitMQURL := os.Getenv("RABBIT_MQ_URL")
+	if rabbitMQURL == "" {
+		rabbitMQURL = "amqp://admin:password@localhost:5672/"
+	}
+
+	rabbitMQ, err := broker.NewRabbitMQClient(rabbitMQURL)
+	if err != nil {
+		log.Fatalf("Failed to connect to RabbitMQ: %v", err)
+	}
+
+	defer rabbitMQ.Close()
+
+	err = rabbitMQ.DeclareExchange("user_events", "topic")
+	if err != nil {
+		log.Fatalf("Failed to declare exchange: %v", err)
+	}
+
+	customerSvc := service.NewCustomerService(customerRepo, rabbitMQ)
 
 	orderSvc, err := service.NewOrderService(orderRepo, cartRepo, catalogClient)
 	if err != nil {
