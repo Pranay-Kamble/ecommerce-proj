@@ -2,8 +2,8 @@ package service
 
 import (
 	"context"
+	"ecommerce/services/payment/internal/domain"
 	"ecommerce/services/payment/internal/repository"
-	"fmt"
 
 	"github.com/stripe/stripe-go/v78"
 	"github.com/stripe/stripe-go/v78/checkout/session"
@@ -47,10 +47,22 @@ func (s *paymentService) CreateCheckoutSession(ctx context.Context, orderID stri
 
 	sess, err := session.New(params)
 	if err != nil {
-		return "", "", fmt.Errorf("service: failed to create checkout session: %w", err)
+		return "", "", err
 	}
 
-	// TODO : Save this to Postgres database using s.paymentRepository
+	paymentRecord := &domain.Payment{
+		OrderID:  orderID,
+		UserID:   userID,
+		StripeID: sess.ID,
+		Amount:   amount,
+		Currency: currency,
+		Status:   "pending",
+	}
+
+	err = s.paymentRepository.CreatePayment(ctx, paymentRecord)
+	if err != nil {
+		return "", "", err
+	}
 
 	return sess.ID, sess.URL, nil
 }
