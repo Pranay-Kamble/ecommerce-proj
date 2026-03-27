@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package payment;
+
+option go_package = "ecommerce/pkg/protobufs/payment";
+
+service PaymentService {
+  rpc CreatePaymentSession(CreatePaymentRequest) returns (CreatePaymentResponse);
+}
+
+message CreatePaymentRequest {
+  string order_id = 1;
+  string user_id = 2;
+  int64 amount = 3;
+  string currency = 4;
+}
+
+message CreatePaymentResponse {
+  string payment_url = 1;
+  string transaction_id = 2;
+}
