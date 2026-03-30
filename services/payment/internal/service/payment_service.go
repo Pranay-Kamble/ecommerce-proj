@@ -17,8 +17,8 @@ type paymentService struct {
 	paymentRepository repository.PaymentRepository
 }
 
-func NewPaymentService(repo repository.PaymentRepository, stripeSecretKey string) PaymentService {
-	stripe.Key = stripeSecretKey
+func NewPaymentService(repo repository.PaymentRepository, paymentGatewaySecretKey string) PaymentService {
+	stripe.Key = paymentGatewaySecretKey
 	return &paymentService{paymentRepository: repo}
 }
 
@@ -51,12 +51,12 @@ func (s *paymentService) CreateCheckoutSession(ctx context.Context, orderID stri
 	}
 
 	paymentRecord := &domain.Payment{
-		OrderID:  orderID,
-		UserID:   userID,
-		StripeID: sess.ID,
-		Amount:   amount,
-		Currency: currency,
-		Status:   "pending",
+		OrderID:          orderID,
+		UserID:           userID,
+		GatewaySessionID: sess.ID,
+		Amount:           amount,
+		Currency:         currency,
+		Status:           "pending",
 	}
 
 	err = s.paymentRepository.CreatePayment(ctx, paymentRecord)
