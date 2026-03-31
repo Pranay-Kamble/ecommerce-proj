@@ -4,6 +4,7 @@ import (
 	"context"
 	"ecommerce/services/payment/internal/domain"
 	"ecommerce/services/payment/internal/repository"
+	"fmt"
 
 	"github.com/stripe/stripe-go/v78"
 	"github.com/stripe/stripe-go/v78/checkout/session"
@@ -11,14 +12,24 @@ import (
 
 type PaymentService interface {
 	CreateCheckoutSession(ctx context.Context, orderID string, userID string, amount int64, currency string) (string, string, error)
+	MarkPaymentAsSuccess(ctx context.Context, sessionID string) error
 }
 
 type paymentService struct {
 	paymentRepository repository.PaymentRepository
 }
 
-func NewPaymentService(repo repository.PaymentRepository, stripeSecretKey string) PaymentService {
-	stripe.Key = stripeSecretKey
+func (s *paymentService) MarkPaymentAsSuccess(ctx context.Context, sessionID string) error {
+	err := s.paymentRepository.UpdatePaymentStatusBySessionID(ctx, sessionID, "success")
+	if err != nil {
+		return fmt.Errorf("service: failed to mark payment as success: %w", err)
+	}
+
+	return nil
+}
+
+func NewPaymentService(repo repository.PaymentRepository, paymentGatewaySecretKey string) PaymentService {
+	stripe.Key = paymentGatewaySecretKey
 	return &paymentService{paymentRepository: repo}
 }
 
@@ -51,12 +62,12 @@ func (s *paymentService) CreateCheckoutSession(ctx context.Context, orderID stri
 	}
 
 	paymentRecord := &domain.Payment{
-		OrderID:  orderID,
-		UserID:   userID,
-		StripeID: sess.ID,
-		Amount:   amount,
-		Currency: currency,
-		Status:   "pending",
+		OrderID:          orderID,
+		UserID:           userID,
+		GatewaySessionID: sess.ID,
+		Amount:           amount,
+		Currency:         currency,
+		Status:           "pending",
 	}
 
 	err = s.paymentRepository.CreatePayment(ctx, paymentRecord)

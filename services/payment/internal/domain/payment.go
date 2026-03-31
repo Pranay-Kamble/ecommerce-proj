@@ -15,7 +15,9 @@ type Payment struct {
 	OrderID  string    `gorm:"varchar(30);not null; index" json:"order_id"`
 	UserID   string    `gorm:"varchar(30);not null; index" json:"user_id"`
 
-	StripeID string `gorm:"varchar(255);uniqueIndex" json:"stripe_id"`
+	Provider         string `gorm:"type:varchar(20);default:'stripe'" json:"provider"`
+	GatewaySessionID string `gorm:"varchar(255);uniqueIndex" json:"gateway_session_id"`
+
 	Amount   int64  `gorm:"not null,min=0" json:"amount"`
 	Currency string `gorm:"varchar(10); default='inr'" json:"currency"`
 

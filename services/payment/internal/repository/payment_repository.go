@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"ecommerce/services/payment/internal/domain"
+	"errors"
 	"fmt"
 
 	"gorm.io/gorm"
@@ -10,7 +11,7 @@ import (
 
 type PaymentRepository interface {
 	CreatePayment(ctx context.Context, payment *domain.Payment) error
-	UpdatePaymentStatusByStripeID(ctx context.Context, stripeID string, status string) error
+	UpdatePaymentStatusBySessionID(ctx context.Context, sessionID string, status string) error
 }
 
 type paymentRepository struct {
@@ -29,10 +30,44 @@ func (r *paymentRepository) CreatePayment(ctx context.Context, payment *domain.P
 	return nil
 }
 
-func (r *paymentRepository) UpdatePaymentStatusByStripeID(ctx context.Context, stripeID string, status string) error {
-	_, err := gorm.G[*domain.Payment](r.db).Where("stripe_id = ?", stripeID).Update(ctx, "status", status)
-	if err != nil {
-		return fmt.Errorf("repository: could not update payment status: %w", err)
-	}
-	return nil
+func (r *paymentRepository) UpdatePaymentStatusBySessionID(ctx context.Context, sessionID string, status string) error {
+
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+
+		//Save to Payment Service Database
+		var payment domain.Payment
+		innerErr := tx.Where("stripe_id = ?", sessionID).First(&payment).Error
+		if innerErr != nil {
+			if errors.Is(innerErr, gorm.ErrRecordNotFound) {
+				return errors.New("payment record not found for the given session ID")
+			}
+			return fmt.Errorf("could not find payment: %w", innerErr)
+		}
+
+		payment.Status = status
+		innerErr = tx.Save(&payment).Error
+		if innerErr != nil {
+			return fmt.Errorf("could not update payment status: %w", innerErr)
+		}
+
+		//Save to Outbox Database for Message Broker
+		if status == "success" {
+			payload := fmt.Sprintf(`{"order_id": "%s", "status": "paid"}`, payment.OrderID)
+
+			outboxEvent := &domain.OutboxEvent{
+				EventType: "OrderPaid",
+				Payload:   payload,
+				Processed: false,
+			}
+
+			innerErr = tx.Create(outboxEvent).Error
+			if innerErr != nil {
+				return fmt.Errorf("failed to save event to outbox: %w", innerErr)
+			}
+		}
+
+		return nil
+	})
+
+	return err
 }
