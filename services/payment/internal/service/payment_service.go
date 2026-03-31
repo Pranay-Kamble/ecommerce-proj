@@ -4,6 +4,7 @@ import (
 	"context"
 	"ecommerce/services/payment/internal/domain"
 	"ecommerce/services/payment/internal/repository"
+	"fmt"
 
 	"github.com/stripe/stripe-go/v78"
 	"github.com/stripe/stripe-go/v78/checkout/session"
@@ -11,10 +12,22 @@ import (
 
 type PaymentService interface {
 	CreateCheckoutSession(ctx context.Context, orderID string, userID string, amount int64, currency string) (string, string, error)
+	MarkPaymentAsSuccess(ctx context.Context, sessionID string) error
 }
 
 type paymentService struct {
 	paymentRepository repository.PaymentRepository
+}
+
+func (s *paymentService) MarkPaymentAsSuccess(ctx context.Context, sessionID string) error {
+	err := s.paymentRepository.UpdatePaymentStatusBySessionID(ctx, sessionID, "success")
+	if err != nil {
+		return fmt.Errorf("service: failed to mark payment as success: %w", err)
+	}
+
+	//rabbitmq publish here
+
+	return nil
 }
 
 func NewPaymentService(repo repository.PaymentRepository, paymentGatewaySecretKey string) PaymentService {

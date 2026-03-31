@@ -10,7 +10,7 @@ import (
 
 type PaymentRepository interface {
 	CreatePayment(ctx context.Context, payment *domain.Payment) error
-	UpdatePaymentStatusByStripeID(ctx context.Context, stripeID string, status string) error
+	UpdatePaymentStatusBySessionID(ctx context.Context, sessionID string, status string) error
 }
 
 type paymentRepository struct {
@@ -29,10 +29,13 @@ func (r *paymentRepository) CreatePayment(ctx context.Context, payment *domain.P
 	return nil
 }
 
-func (r *paymentRepository) UpdatePaymentStatusByStripeID(ctx context.Context, stripeID string, status string) error {
-	_, err := gorm.G[*domain.Payment](r.db).Where("stripe_id = ?", stripeID).Update(ctx, "status", status)
+func (r *paymentRepository) UpdatePaymentStatusBySessionID(ctx context.Context, sessionID string, status string) error {
+	rowsAffected, err := gorm.G[*domain.Payment](r.db).Where("stripe_id = ?", sessionID).Update(ctx, "status", status)
 	if err != nil {
 		return fmt.Errorf("repository: could not update payment status: %w", err)
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("repository: sessionID not found :%w", err)
 	}
 	return nil
 }
