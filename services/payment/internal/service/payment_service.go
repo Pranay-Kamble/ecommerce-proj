@@ -25,8 +25,6 @@ func (s *paymentService) MarkPaymentAsSuccess(ctx context.Context, sessionID str
 		return fmt.Errorf("service: failed to mark payment as success: %w", err)
 	}
 
-	//rabbitmq publish here
-
 	return nil
 }
 

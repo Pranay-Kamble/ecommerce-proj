@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"ecommerce/services/payment/internal/domain"
+	"errors"
 	"fmt"
 
 	"gorm.io/gorm"
@@ -30,12 +31,43 @@ func (r *paymentRepository) CreatePayment(ctx context.Context, payment *domain.P
 }
 
 func (r *paymentRepository) UpdatePaymentStatusBySessionID(ctx context.Context, sessionID string, status string) error {
-	rowsAffected, err := gorm.G[*domain.Payment](r.db).Where("stripe_id = ?", sessionID).Update(ctx, "status", status)
-	if err != nil {
-		return fmt.Errorf("repository: could not update payment status: %w", err)
-	}
-	if rowsAffected == 0 {
-		return fmt.Errorf("repository: sessionID not found :%w", err)
-	}
-	return nil
+
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+
+		//Save to Payment Service Database
+		var payment domain.Payment
+		innerErr := tx.Where("stripe_id = ?", sessionID).First(&payment).Error
+		if innerErr != nil {
+			if errors.Is(innerErr, gorm.ErrRecordNotFound) {
+				return errors.New("payment record not found for the given session ID")
+			}
+			return fmt.Errorf("could not find payment: %w", innerErr)
+		}
+
+		payment.Status = status
+		innerErr = tx.Save(&payment).Error
+		if innerErr != nil {
+			return fmt.Errorf("could not update payment status: %w", innerErr)
+		}
+
+		//Save to Outbox Database for Message Broker
+		if status == "success" {
+			payload := fmt.Sprintf(`{"order_id": "%s", "status": "paid"}`, payment.OrderID)
+
+			outboxEvent := &domain.OutboxEvent{
+				EventType: "OrderPaid",
+				Payload:   payload,
+				Processed: false,
+			}
+
+			innerErr = tx.Create(outboxEvent).Error
+			if innerErr != nil {
+				return fmt.Errorf("failed to save event to outbox: %w", innerErr)
+			}
+		}
+
+		return nil
+	})
+
+	return err
 }
