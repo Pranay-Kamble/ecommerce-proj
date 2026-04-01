@@ -25,7 +25,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	logger.Init("dev")
-	err := godotenv.Load("../../../.env")
+	err := godotenv.Load(".env")
 	if err != nil {
 		logger.Error("Error loading .env file. Using local environment variables.")
 	}
@@ -53,7 +53,7 @@ func main() {
 
 	rabbitmqUrl := os.Getenv("RABBIT_MQ_URL")
 	if rabbitmqUrl == "" {
-		rabbitmqUrl = "amqp://guest:guest@localhost:5672/"
+		rabbitmqUrl = "amqp://admin:password@localhost:5672/"
 	}
 	rabbitConn, err := amqp.Dial(rabbitmqUrl)
 	if err != nil {
