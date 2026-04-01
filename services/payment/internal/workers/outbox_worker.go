@@ -2,10 +2,11 @@ package workers
 
 import (
 	"context"
-	"ecommerce/pkg/logger"
-	"ecommerce/services/payment/internal/domain"
 	"sync"
 	"time"
+
+	"ecommerce/pkg/logger"
+	"ecommerce/services/payment/internal/domain"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 	"go.uber.org/zap"
@@ -22,13 +23,15 @@ func NewOutboxWorker(db *gorm.DB, rabbitMQ *amqp.Channel) *OutboxWorker {
 }
 
 func (ow *OutboxWorker) StartOutboxWorker(ctx context.Context) {
+	logger.Info("worker: Outbox processor started successfully, polling every 5 seconds")
+
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ctx.Done():
-			logger.Info("OutboxWorker is shutting down")
+			logger.Info("worker: Outbox processor shutting down gracefully")
 			return
 		case <-ticker.C:
 			ow.processOutboxEvents(ctx)
@@ -37,10 +40,11 @@ func (ow *OutboxWorker) StartOutboxWorker(ctx context.Context) {
 }
 
 func (ow *OutboxWorker) processOutboxEvents(ctx context.Context) {
-	events, err := gorm.G[*domain.OutboxEvent](ow.db).Where("processed = ?", false).Limit(50).Find(ctx)
+	var events []*domain.OutboxEvent
 
+	err := ow.db.WithContext(ctx).Where("processed = ?", false).Limit(50).Find(&events).Error
 	if err != nil {
-		logger.Error("worker: failed to retrieve unprocessed events: ", zap.Error(err))
+		logger.Error("worker: failed to retrieve unprocessed events", zap.Error(err))
 		return
 	}
 
@@ -48,19 +52,45 @@ func (ow *OutboxWorker) processOutboxEvents(ctx context.Context) {
 		return
 	}
 
-	waitgroup := &sync.WaitGroup{}
+	logger.Info("worker: picked up pending outbox events", zap.Int("event_count", len(events)))
+
+	var waitgroup sync.WaitGroup
+
 	for _, event := range events {
 		waitgroup.Add(1)
+
 		go func(e *domain.OutboxEvent) {
 			defer waitgroup.Done()
+
+			logger.Info("worker: attempting to publish event",
+				zap.String("event_id", e.ID.String()),
+				zap.String("event_type", e.EventType),
+			)
+
 			innerErr := ow.brokerPublishEvent(ctx, e)
 
 			if innerErr != nil {
-				logger.Error("worker: failed to publish event", zap.Error(innerErr))
-			} else {
-				ow.db.Delete(e)
-				logger.Info("worker: event is published", zap.Any("event", e))
+				logger.Error("worker: failed to publish event to RabbitMQ",
+					zap.String("event_id", e.ID.String()),
+					zap.Error(innerErr),
+				)
+				return
 			}
+
+			dbErr := ow.db.WithContext(ctx).Delete(e).Error
+			if dbErr != nil {
+				logger.Error("worker: CRITICAL - event published but failed to delete from DB",
+					zap.String("event_id", e.ID.String()),
+					zap.Error(dbErr),
+				)
+				return
+			}
+
+			logger.Info("worker: successfully published and deleted event",
+				zap.String("event_id", e.ID.String()),
+				zap.String("routing_key", "payment."+e.EventType),
+			)
+
 		}(event)
 	}
 
@@ -71,7 +101,7 @@ func (ow *OutboxWorker) brokerPublishEvent(ctx context.Context, event *domain.Ou
 	routingKey := "payment." + event.EventType
 
 	err := ow.rabbitMQ.PublishWithContext(ctx,
-		"payment_events", // exchange declared in main.go
+		"payment_events",
 		routingKey,
 		false,
 		false,
