@@ -31,7 +31,7 @@ func RequireUser() gin.HandlerFunc {
 			return
 		}
 
-		extractedUserID := claims["user_id"]
+		extractedUserID := claims["id"]
 
 		if extractedUserID == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token payload"})
