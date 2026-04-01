@@ -11,8 +11,9 @@ import (
 
 type OrderRepository interface {
 	CreateOrder(ctx context.Context, order *domain.Order) error
-	GetOrderByPublicID(ctx context.Context, publicID string, userID string) (*domain.Order, error)
+	GetOrderByPublicID(ctx context.Context, publicID string) (*domain.Order, error)
 	GetUserOrders(ctx context.Context, userID string) ([]domain.Order, error)
+	UpdateOrder(ctx context.Context, order *domain.Order) error
 }
 
 type orderRepository struct {
@@ -34,10 +35,10 @@ func (r *orderRepository) CreateOrder(ctx context.Context, order *domain.Order) 
 	return nil
 }
 
-func (r *orderRepository) GetOrderByPublicID(ctx context.Context, publicID string, userID string) (*domain.Order, error) {
+func (r *orderRepository) GetOrderByPublicID(ctx context.Context, publicID string) (*domain.Order, error) {
 	order, err := gorm.G[domain.Order](r.db).
 		Preload("Items", nil).
-		Where("public_id = ? AND user_id = ?", publicID, userID).
+		Where("public_id = ?", publicID).
 		First(ctx)
 
 	if err != nil {
@@ -57,4 +58,12 @@ func (r *orderRepository) GetUserOrders(ctx context.Context, userID string) ([]d
 		return nil, fmt.Errorf("repository: failed to fetch user orders: %w", err)
 	}
 	return orders, nil
+}
+
+func (r *orderRepository) UpdateOrder(ctx context.Context, order *domain.Order) error {
+	_, err := gorm.G[*domain.Order](r.db).Where("public_id = ?", order.PublicID).Updates(ctx, order)
+	if err != nil {
+		return fmt.Errorf("repository: failed to update order: %w", err)
+	}
+	return nil
 }
