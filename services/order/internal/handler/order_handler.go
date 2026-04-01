@@ -50,8 +50,8 @@ func (h *OrderHandler) Checkout(c *gin.Context) {
 		State:       req.State,
 		ZipCode:     req.ZipCode,
 	}
-	
-	order, err := h.orderService.Checkout(c.Request.Context(), userID, req.Name, req.Phone, shippingAddress)
+
+	order, paymentURL, err := h.orderService.Checkout(c.Request.Context(), userID, req.Name, req.Phone, shippingAddress)
 	if err != nil {
 		if strings.Contains(err.Error(), "empty cart") {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Your cart is empty. Please add items before checking out."})
@@ -74,7 +74,7 @@ func (h *OrderHandler) Checkout(c *gin.Context) {
 				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid checkout payload.", "details": st.Message()})
 				return
 			case codes.DeadlineExceeded:
-				c.JSON(http.StatusGatewayTimeout, gin.H{"error": "Checkout timed out while verifying prices. Please try again."})
+				c.JSON(http.StatusGatewayTimeout, gin.H{"error": " Checkout timed out while verifying prices. Please try again."})
 				return
 			}
 		}
@@ -87,7 +87,11 @@ func (h *OrderHandler) Checkout(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, order)
+	c.JSON(http.StatusCreated, gin.H{
+		"message":     "Order created successfully. Please complete your payment.",
+		"order_id":    order.PublicID,
+		"payment_url": paymentURL,
+	})
 }
 
 func (h *OrderHandler) GetOrder(c *gin.Context) {

@@ -14,7 +14,7 @@ import (
 )
 
 type PaymentService interface {
-	InitiatePayment(ctx context.Context, orderID string, amount float64, currency string) (string, error)
+	InitiatePayment(ctx context.Context, orderID string, userID string, amount int64, currency string) (string, error)
 	Close() error
 }
 
@@ -39,13 +39,14 @@ func NewPaymentClient(paymentServiceAddr string) (PaymentService, error) {
 	}, nil
 }
 
-func (p *paymentGRPCClient) InitiatePayment(ctx context.Context, orderID string, amount float64, currency string) (string, error) {
+func (p *paymentGRPCClient) InitiatePayment(ctx context.Context, orderID string, userID string, amount int64, currency string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	req := &pb.CreatePaymentRequest{
 		OrderId:  orderID,
-		Amount:   int64(amount),
+		UserId:   userID,
+		Amount:   amount,
 		Currency: currency,
 	}
 

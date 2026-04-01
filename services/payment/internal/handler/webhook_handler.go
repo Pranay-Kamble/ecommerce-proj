@@ -4,6 +4,7 @@ import (
 	"ecommerce/pkg/logger"
 	"ecommerce/services/payment/internal/service"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 
@@ -34,12 +35,21 @@ func (wh *WebhookHandler) handleWebhook(c *gin.Context) {
 
 	signatureHeader := c.GetHeader("Stripe-Signature")
 	if signatureHeader == "" {
+		fmt.Println("ERROR: Missing Stripe-Signature header!")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "missing Stripe-Signature header"})
 		return
 	}
 
-	event, err := webhook.ConstructEvent(payload, signatureHeader, wh.webhookSecret)
+	event, err := webhook.ConstructEventWithOptions(
+		payload,
+		signatureHeader,
+		wh.webhookSecret,
+		webhook.ConstructEventOptions{
+			IgnoreAPIVersionMismatch: true,
+		},
+	)
 	if err != nil {
+		fmt.Println("ERROR: Signature Verification Failed! Details:", err.Error())
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "verification failed"})
 		return
 	}
@@ -60,6 +70,11 @@ func (wh *WebhookHandler) handleWebhook(c *gin.Context) {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed to mark payment as success"})
 			return
 		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"message":    "Payment successful! Your order is confirmed.",
+			"session_id": session.ID,
+		})
 	}
 
 	c.JSON(http.StatusOK, gin.H{"status": "success"})

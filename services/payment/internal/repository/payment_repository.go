@@ -36,7 +36,7 @@ func (r *paymentRepository) UpdatePaymentStatusBySessionID(ctx context.Context, 
 
 		//Save to Payment Service Database
 		var payment domain.Payment
-		innerErr := tx.Where("stripe_id = ?", sessionID).First(&payment).Error
+		innerErr := tx.Where("gateway_session_id = ?", sessionID).First(&payment).Error
 		if innerErr != nil {
 			if errors.Is(innerErr, gorm.ErrRecordNotFound) {
 				return errors.New("payment record not found for the given session ID")

@@ -15,7 +15,7 @@ import (
 
 func main() {
 	r := gin.Default()
-	err := godotenv.Load("../../.env")
+	err := godotenv.Load(".env")
 	if err != nil {
 		log.Println("main: Error loading .env file, relying on system env vars")
 	}

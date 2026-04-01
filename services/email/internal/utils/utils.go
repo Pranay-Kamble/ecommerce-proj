@@ -17,7 +17,7 @@ var (
 
 func GenerateHTMLBody(otp string) (string, error) {
 	tmplOnce.Do(func() {
-		verificationEmailTemplate, tmplErr = template.ParseFiles("../../internal/templates/email_verification.html")
+		verificationEmailTemplate, tmplErr = template.ParseFiles("./internal/templates/email_verification.html")
 	})
 
 	if tmplErr != nil {
