@@ -1,6 +1,6 @@
 module ecommerce/services/email
 
-go 1.25.0
+go 1.26
 
 require github.com/wneessen/go-mail v0.7.2
 
