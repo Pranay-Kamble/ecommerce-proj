@@ -144,7 +144,7 @@ func main() {
 	}
 	defer rabbitChannel.Close()
 
-	paymentConsumer := workers.NewPaymentConsumer(rabbitChannel, orderSvc, cartRepo)
+	paymentConsumer := workers.NewPaymentConsumer(rabbitChannel, orderSvc, cartRepo, catalogClient)
 
 	go func() {
 		logger.Info("Starting Payment RabbitMQ Consumer...")

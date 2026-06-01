@@ -6,7 +6,8 @@ import (
 	"fmt"
 
 	"ecommerce/pkg/logger"
-	"ecommerce/services/order/internal/repository" // <-- Import your repository package
+	pb "ecommerce/pkg/protobufs/catalog"
+	"ecommerce/services/order/internal/repository"
 	"ecommerce/services/order/internal/service"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -17,6 +18,7 @@ type PaymentConsumer struct {
 	rabbitChannel *amqp.Channel
 	orderService  service.OrderService
 	cartRepo      repository.CartRepository
+	catalogClient pb.CatalogServiceClient
 }
 
 type PaymentEventPayload struct {
@@ -25,11 +27,12 @@ type PaymentEventPayload struct {
 	Status  string `json:"status"`
 }
 
-func NewPaymentConsumer(ch *amqp.Channel, svc service.OrderService, cartRepo repository.CartRepository) *PaymentConsumer {
+func NewPaymentConsumer(ch *amqp.Channel, svc service.OrderService, cartRepo repository.CartRepository, catalogClient pb.CatalogServiceClient) *PaymentConsumer {
 	return &PaymentConsumer{
 		rabbitChannel: ch,
 		orderService:  svc,
 		cartRepo:      cartRepo,
+		catalogClient: catalogClient,
 	}
 }
 func (c *PaymentConsumer) StartListening(ctx context.Context) error {
@@ -121,6 +124,26 @@ func (c *PaymentConsumer) processMessage(ctx context.Context, msg amqp.Delivery)
 		if err != nil {
 			logger.Error("Failed to fetch order to clear cart", zap.Error(err))
 		} else {
+			// Decrease inventory in Catalog service via gRPC
+			var items []*pb.InventoryItem
+			for _, item := range order.Items {
+				items = append(items, &pb.InventoryItem{
+					VariantId: item.ProductID,
+					Quantity:  int32(item.Quantity),
+				})
+			}
+
+			_, inventoryErr := c.catalogClient.DecreaseInventory(ctx, &pb.DecreaseInventoryRequest{Items: items})
+			if inventoryErr != nil {
+				logger.Error("Failed to decrease inventory via gRPC, order is paid but stock not updated",
+					zap.Error(inventoryErr),
+					zap.String("order_id", payload.OrderID),
+				)
+			} else {
+				logger.Info("Inventory decreased successfully for order", zap.String("order_id", payload.OrderID))
+			}
+
+			// Clear the user's cart
 			err = c.cartRepo.ClearCart(ctx, order.UserID)
 			if err != nil {
 				logger.Error("Failed to clear cart, but order was paid", zap.Error(err))
