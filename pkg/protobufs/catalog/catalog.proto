@@ -6,6 +6,7 @@ option go_package = "ecommerce/pkg/protobufs/catalog";
 
 service CatalogService {
   rpc CheckPrices(CheckPricesRequest) returns (CheckPricesResponse) {}
+  rpc DecreaseInventory(DecreaseInventoryRequest) returns (DecreaseInventoryResponse) {}
 }
 
 message CheckPricesRequest {
@@ -20,4 +21,18 @@ message ProductCheck {
 
 message CheckPricesResponse {
   repeated ProductCheck products = 1;
+}
+
+message InventoryItem {
+  string variant_id = 1;
+  int32 quantity = 2;
+}
+
+message DecreaseInventoryRequest {
+  repeated InventoryItem items = 1;
+}
+
+message DecreaseInventoryResponse {
+  bool success = 1;
+  string message = 2;
 }

@@ -2,11 +2,13 @@ package service
 
 import (
 	"context"
-	"ecommerce/services/catalog/internal/domain"
-	"ecommerce/services/catalog/internal/repository"
 	"fmt"
 	"os"
 	"strconv"
+
+	pb "ecommerce/pkg/protobufs/catalog"
+	"ecommerce/services/catalog/internal/domain"
+	"ecommerce/services/catalog/internal/repository"
 )
 
 type ProductService interface {
@@ -16,6 +18,7 @@ type ProductService interface {
 
 	GetProductByPublicID(ctx context.Context, publicID string) (*domain.Product, error)
 	VerifyVariants(ctx context.Context, variantIDs []string) ([]*domain.Variant, error)
+	DecreaseInventory(ctx context.Context, items []*pb.InventoryItem) error
 
 	ListAllProducts(ctx context.Context, page, limit int) ([]*domain.Product, error)
 	ListProductsByCategory(ctx context.Context, categoryPublicID string, limit, offset int) ([]*domain.Product, error)
@@ -26,6 +29,7 @@ type productService struct {
 	categoryRepo repository.CategoryRepository
 	productRepo  repository.ProductRepository
 	sellerRepo   repository.SellerRepository
+	variantRepo  repository.VariantRepository
 }
 
 func (p *productService) ListAllProducts(ctx context.Context, page, limit int) ([]*domain.Product, error) {
@@ -149,11 +153,12 @@ func (p *productService) ListProductsBySeller(ctx context.Context, sellerUserID 
 	return products, nil
 }
 
-func NewProductService(categoryRepo repository.CategoryRepository, productRepo repository.ProductRepository, sellerRepo repository.SellerRepository) ProductService {
+func NewProductService(categoryRepo repository.CategoryRepository, productRepo repository.ProductRepository, sellerRepo repository.SellerRepository, variantRepo repository.VariantRepository) ProductService {
 	return &productService{
 		categoryRepo: categoryRepo,
 		productRepo:  productRepo,
 		sellerRepo:   sellerRepo,
+		variantRepo:  variantRepo,
 	}
 }
 
@@ -214,4 +219,14 @@ func (p *productService) VerifyVariants(ctx context.Context, variantIDs []string
 	}
 
 	return variants, nil
+}
+
+func (p *productService) DecreaseInventory(ctx context.Context, items []*pb.InventoryItem) error {
+	for _, item := range items {
+		err := p.variantRepo.UpdateInventoryByPublicID(ctx, item.VariantId, -int(item.Quantity))
+		if err != nil {
+			return fmt.Errorf("service: failed to decrease inventory for variant %s: %w", item.VariantId, err)
+		}
+	}
+	return nil
 }

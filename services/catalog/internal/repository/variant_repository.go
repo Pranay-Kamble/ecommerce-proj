@@ -15,6 +15,7 @@ type VariantRepository interface {
 	GetBySKU(ctx context.Context, sku string) (*domain.Variant, error)
 	GetByPublicID(ctx context.Context, publicID string) (*domain.Variant, error)
 	UpdateInventory(ctx context.Context, sku string, quantityChange int) error
+	UpdateInventoryByPublicID(ctx context.Context, publicID string, quantityChange int) error
 	UpdatePrice(ctx context.Context, sku string, newPrice float64) error
 	UpdateByID(ctx context.Context, id *uuid.UUID, updated *domain.Variant) error
 
@@ -73,6 +74,22 @@ func (v *variantRepository) UpdateInventory(ctx context.Context, sku string, qua
 
 	if rowsAffected == 0 {
 		return fmt.Errorf("repository: insufficient stock or invalid SKU")
+	}
+
+	return nil
+}
+
+func (v *variantRepository) UpdateInventoryByPublicID(ctx context.Context, publicID string, quantityChange int) error {
+	rowsAffected, err := gorm.G[*domain.Variant](v.db).
+		Where("public_id = ? AND inventory + ? >= 0", publicID, quantityChange).
+		Update(ctx, "inventory", gorm.Expr("inventory + ?", quantityChange))
+
+	if err != nil {
+		return fmt.Errorf("repository: failed to update inventory: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("repository: insufficient stock or invalid variant public ID: %s", publicID)
 	}
 
 	return nil

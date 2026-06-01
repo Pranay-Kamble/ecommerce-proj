@@ -169,6 +169,154 @@ func (x *CheckPricesResponse) GetProducts() []*ProductCheck {
 	return nil
 }
 
+type InventoryItem struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	VariantId     string                 `protobuf:"bytes,1,opt,name=variant_id,json=variantId,proto3" json:"variant_id,omitempty"`
+	Quantity      int32                  `protobuf:"varint,2,opt,name=quantity,proto3" json:"quantity,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InventoryItem) Reset() {
+	*x = InventoryItem{}
+	mi := &file_pkg_protobufs_catalog_catalog_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InventoryItem) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InventoryItem) ProtoMessage() {}
+
+func (x *InventoryItem) ProtoReflect() protoreflect.Message {
+	mi := &file_pkg_protobufs_catalog_catalog_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InventoryItem.ProtoReflect.Descriptor instead.
+func (*InventoryItem) Descriptor() ([]byte, []int) {
+	return file_pkg_protobufs_catalog_catalog_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *InventoryItem) GetVariantId() string {
+	if x != nil {
+		return x.VariantId
+	}
+	return ""
+}
+
+func (x *InventoryItem) GetQuantity() int32 {
+	if x != nil {
+		return x.Quantity
+	}
+	return 0
+}
+
+type DecreaseInventoryRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Items         []*InventoryItem       `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DecreaseInventoryRequest) Reset() {
+	*x = DecreaseInventoryRequest{}
+	mi := &file_pkg_protobufs_catalog_catalog_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DecreaseInventoryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DecreaseInventoryRequest) ProtoMessage() {}
+
+func (x *DecreaseInventoryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_pkg_protobufs_catalog_catalog_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DecreaseInventoryRequest.ProtoReflect.Descriptor instead.
+func (*DecreaseInventoryRequest) Descriptor() ([]byte, []int) {
+	return file_pkg_protobufs_catalog_catalog_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *DecreaseInventoryRequest) GetItems() []*InventoryItem {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
+type DecreaseInventoryResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DecreaseInventoryResponse) Reset() {
+	*x = DecreaseInventoryResponse{}
+	mi := &file_pkg_protobufs_catalog_catalog_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DecreaseInventoryResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DecreaseInventoryResponse) ProtoMessage() {}
+
+func (x *DecreaseInventoryResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_pkg_protobufs_catalog_catalog_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DecreaseInventoryResponse.ProtoReflect.Descriptor instead.
+func (*DecreaseInventoryResponse) Descriptor() ([]byte, []int) {
+	return file_pkg_protobufs_catalog_catalog_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *DecreaseInventoryResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *DecreaseInventoryResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
 var File_pkg_protobufs_catalog_catalog_proto protoreflect.FileDescriptor
 
 const file_pkg_protobufs_catalog_catalog_proto_rawDesc = "" +
@@ -183,9 +331,19 @@ const file_pkg_protobufs_catalog_catalog_proto_rawDesc = "" +
 	"\x05price\x18\x02 \x01(\x01R\x05price\x12!\n" +
 	"\fis_available\x18\x03 \x01(\bR\visAvailable\"H\n" +
 	"\x13CheckPricesResponse\x121\n" +
-	"\bproducts\x18\x01 \x03(\v2\x15.catalog.ProductCheckR\bproducts2\\\n" +
+	"\bproducts\x18\x01 \x03(\v2\x15.catalog.ProductCheckR\bproducts\"J\n" +
+	"\rInventoryItem\x12\x1d\n" +
+	"\n" +
+	"variant_id\x18\x01 \x01(\tR\tvariantId\x12\x1a\n" +
+	"\bquantity\x18\x02 \x01(\x05R\bquantity\"H\n" +
+	"\x18DecreaseInventoryRequest\x12,\n" +
+	"\x05items\x18\x01 \x03(\v2\x16.catalog.InventoryItemR\x05items\"O\n" +
+	"\x19DecreaseInventoryResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage2\xba\x01\n" +
 	"\x0eCatalogService\x12J\n" +
-	"\vCheckPrices\x12\x1b.catalog.CheckPricesRequest\x1a\x1c.catalog.CheckPricesResponse\"\x00B!Z\x1fecommerce/pkg/protobufs/catalogb\x06proto3"
+	"\vCheckPrices\x12\x1b.catalog.CheckPricesRequest\x1a\x1c.catalog.CheckPricesResponse\"\x00\x12\\\n" +
+	"\x11DecreaseInventory\x12!.catalog.DecreaseInventoryRequest\x1a\".catalog.DecreaseInventoryResponse\"\x00B!Z\x1fecommerce/pkg/protobufs/catalogb\x06proto3"
 
 var (
 	file_pkg_protobufs_catalog_catalog_proto_rawDescOnce sync.Once
@@ -199,21 +357,27 @@ func file_pkg_protobufs_catalog_catalog_proto_rawDescGZIP() []byte {
 	return file_pkg_protobufs_catalog_catalog_proto_rawDescData
 }
 
-var file_pkg_protobufs_catalog_catalog_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_pkg_protobufs_catalog_catalog_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_pkg_protobufs_catalog_catalog_proto_goTypes = []any{
-	(*CheckPricesRequest)(nil),  // 0: catalog.CheckPricesRequest
-	(*ProductCheck)(nil),        // 1: catalog.ProductCheck
-	(*CheckPricesResponse)(nil), // 2: catalog.CheckPricesResponse
+	(*CheckPricesRequest)(nil),        // 0: catalog.CheckPricesRequest
+	(*ProductCheck)(nil),              // 1: catalog.ProductCheck
+	(*CheckPricesResponse)(nil),       // 2: catalog.CheckPricesResponse
+	(*InventoryItem)(nil),             // 3: catalog.InventoryItem
+	(*DecreaseInventoryRequest)(nil),  // 4: catalog.DecreaseInventoryRequest
+	(*DecreaseInventoryResponse)(nil), // 5: catalog.DecreaseInventoryResponse
 }
 var file_pkg_protobufs_catalog_catalog_proto_depIdxs = []int32{
 	1, // 0: catalog.CheckPricesResponse.products:type_name -> catalog.ProductCheck
-	0, // 1: catalog.CatalogService.CheckPrices:input_type -> catalog.CheckPricesRequest
-	2, // 2: catalog.CatalogService.CheckPrices:output_type -> catalog.CheckPricesResponse
-	2, // [2:3] is the sub-list for method output_type
-	1, // [1:2] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	3, // 1: catalog.DecreaseInventoryRequest.items:type_name -> catalog.InventoryItem
+	0, // 2: catalog.CatalogService.CheckPrices:input_type -> catalog.CheckPricesRequest
+	4, // 3: catalog.CatalogService.DecreaseInventory:input_type -> catalog.DecreaseInventoryRequest
+	2, // 4: catalog.CatalogService.CheckPrices:output_type -> catalog.CheckPricesResponse
+	5, // 5: catalog.CatalogService.DecreaseInventory:output_type -> catalog.DecreaseInventoryResponse
+	4, // [4:6] is the sub-list for method output_type
+	2, // [2:4] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_pkg_protobufs_catalog_catalog_proto_init() }
@@ -227,7 +391,7 @@ func file_pkg_protobufs_catalog_catalog_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_pkg_protobufs_catalog_catalog_proto_rawDesc), len(file_pkg_protobufs_catalog_catalog_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

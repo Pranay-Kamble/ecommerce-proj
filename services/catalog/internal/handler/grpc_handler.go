@@ -47,3 +47,25 @@ func (s *CatalogGrpcServer) CheckPrices(ctx context.Context, req *pb.CheckPrices
 		Products: verifiedProducts,
 	}, nil
 }
+
+func (s *CatalogGrpcServer) DecreaseInventory(ctx context.Context, req *pb.DecreaseInventoryRequest) (*pb.DecreaseInventoryResponse, error) {
+	if req == nil || len(req.Items) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "items array cannot be empty")
+	}
+
+	for _, item := range req.Items {
+		if item.Quantity <= 0 {
+			return nil, status.Errorf(codes.InvalidArgument, "quantity must be positive for variant %s", item.VariantId)
+		}
+	}
+
+	err := s.productService.DecreaseInventory(ctx, req.Items)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to decrease inventory: %v", err)
+	}
+
+	return &pb.DecreaseInventoryResponse{
+		Success: true,
+		Message: "Inventory decreased successfully",
+	}, nil
+}

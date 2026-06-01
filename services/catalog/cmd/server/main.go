@@ -107,7 +107,7 @@ func main() {
 
 	categoryService := service.NewCategoryService(categoryRepo)
 	sellerService := service.NewSellerService(sellerRepo, rabbitMQ)
-	productService := service.NewProductService(categoryRepo, productRepo, sellerRepo)
+	productService := service.NewProductService(categoryRepo, productRepo, sellerRepo, variantRepo)
 	variantService := service.NewVariantService(variantRepo, productRepo, sellerRepo)
 
 	grpcHandler := handler.NewCatalogGrpcServer(productService)
