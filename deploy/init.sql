@@ -6,3 +6,5 @@ CREATE DATABASE buyer_db;
 CREATE DATABASE seller_db;
 CREATE DATABASE logistics_db;
 CREATE DATABASE payment_db;
+CREATE DATABASE catalog_db;
+CREATE DATABASE order_db;
