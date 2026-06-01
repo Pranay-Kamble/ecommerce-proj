@@ -52,7 +52,7 @@ func (r *paymentRepository) UpdatePaymentStatusBySessionID(ctx context.Context, 
 
 		//Save to Outbox Database for Message Broker
 		if status == "success" {
-			payload := fmt.Sprintf(`{"order_id": "%s", "status": "paid"}`, payment.OrderID)
+			payload := fmt.Sprintf(`{"order_id": "%s", "user_id": "%s", "status": "paid"}`, payment.OrderID, payment.UserID)
 
 			outboxEvent := &domain.OutboxEvent{
 				EventType: "OrderPaid",
