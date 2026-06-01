@@ -135,3 +135,10 @@ func (h *OrderHandler) GetUserOrders(c *gin.Context) {
 
 	c.JSON(http.StatusOK, orders)
 }
+
+func (h *OrderHandler) GetInvoice(c *gin.Context) {
+	c.JSON(http.StatusNotFound, gin.H{
+		"error":   "Invoice generation not yet implemented",
+		"message": "This feature will be available soon.",
+	})
+}

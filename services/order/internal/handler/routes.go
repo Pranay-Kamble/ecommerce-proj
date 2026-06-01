@@ -22,6 +22,7 @@ func RegisterRoutes(router *gin.Engine, cartHandler *CartHandler, customerHandle
 
 		v1.POST("/checkout", orderHandler.Checkout)
 		v1.GET("/orders/:public_id", orderHandler.GetOrder)
+		v1.GET("/orders/:public_id/invoice", orderHandler.GetInvoice)
 		v1.GET("/orders", orderHandler.GetUserOrders)
 	}
 }
