@@ -100,6 +100,11 @@ func main() {
 		log.Fatalf("Failed to declare exchange: %v", err)
 	}
 
+	err = rabbitMQ.DeclareExchange("catalog_events", "topic")
+	if err != nil {
+		log.Fatalf("Failed to declare catalog_events exchange: %v", err)
+	}
+
 	categoryRepo := repository.NewCategoryRepository(db)
 	sellerRepo := repository.NewSellerRepository(db)
 	productRepo := repository.NewProductRepository(db)
@@ -107,7 +112,7 @@ func main() {
 
 	categoryService := service.NewCategoryService(categoryRepo)
 	sellerService := service.NewSellerService(sellerRepo, rabbitMQ)
-	productService := service.NewProductService(categoryRepo, productRepo, sellerRepo, variantRepo)
+	productService := service.NewProductService(categoryRepo, productRepo, sellerRepo, variantRepo, rabbitMQ)
 	variantService := service.NewVariantService(variantRepo, productRepo, sellerRepo)
 
 	grpcHandler := handler.NewCatalogGrpcServer(productService)

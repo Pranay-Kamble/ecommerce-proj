@@ -3,12 +3,17 @@ package service
 import (
 	"context"
 	"fmt"
+	"math"
 	"os"
 	"strconv"
 
+	"ecommerce/pkg/broker"
+	"ecommerce/pkg/logger"
 	pb "ecommerce/pkg/protobufs/catalog"
 	"ecommerce/services/catalog/internal/domain"
 	"ecommerce/services/catalog/internal/repository"
+
+	"go.uber.org/zap"
 )
 
 type ProductService interface {
@@ -30,6 +35,7 @@ type productService struct {
 	productRepo  repository.ProductRepository
 	sellerRepo   repository.SellerRepository
 	variantRepo  repository.VariantRepository
+	broker       *broker.RabbitMQClient
 }
 
 func (p *productService) ListAllProducts(ctx context.Context, page, limit int) ([]*domain.Product, error) {
@@ -87,6 +93,10 @@ func (p *productService) UpdateProduct(ctx context.Context, sellerPublicID strin
 	if err != nil {
 		return fmt.Errorf("service: failed to perform update : %w", err)
 	}
+
+	// Publish product.updated event for search indexing
+	p.publishProductEvent(ctx, "product.updated", updatedData.PublicID)
+
 	return nil
 }
 
@@ -108,6 +118,15 @@ func (p *productService) DeleteProduct(ctx context.Context, sellerPublicID strin
 	err = p.productRepo.Delete(ctx, product.ID)
 	if err != nil {
 		return fmt.Errorf("service: failed to delete product : %w", err)
+	}
+
+	// Publish product.deleted event for search indexing
+	deleteEvent := map[string]interface{}{
+		"event":     "product.deleted",
+		"public_id": product.PublicID,
+	}
+	if pubErr := p.broker.Publish(ctx, "catalog_events", "product.deleted", deleteEvent); pubErr != nil {
+		logger.Error("service: failed to publish product.deleted event", zap.Error(pubErr))
 	}
 
 	return nil
@@ -153,12 +172,13 @@ func (p *productService) ListProductsBySeller(ctx context.Context, sellerUserID 
 	return products, nil
 }
 
-func NewProductService(categoryRepo repository.CategoryRepository, productRepo repository.ProductRepository, sellerRepo repository.SellerRepository, variantRepo repository.VariantRepository) ProductService {
+func NewProductService(categoryRepo repository.CategoryRepository, productRepo repository.ProductRepository, sellerRepo repository.SellerRepository, variantRepo repository.VariantRepository, broker *broker.RabbitMQClient) ProductService {
 	return &productService{
 		categoryRepo: categoryRepo,
 		productRepo:  productRepo,
 		sellerRepo:   sellerRepo,
 		variantRepo:  variantRepo,
+		broker:       broker,
 	}
 }
 
@@ -190,6 +210,9 @@ func (p *productService) CreateProduct(c context.Context, sellerPublicID, catego
 	if err != nil {
 		return fmt.Errorf("service: unable to create product: %w", err)
 	}
+
+	// Publish product.created event for search indexing
+	p.publishProductEvent(c, "product.created", product.PublicID)
 
 	return nil
 }
@@ -229,4 +252,76 @@ func (p *productService) DecreaseInventory(ctx context.Context, items []*pb.Inve
 		}
 	}
 	return nil
+}
+
+// publishProductEvent re-fetches the product with all preloads, computes
+// min/max price from variants, and publishes to the catalog_events exchange.
+func (p *productService) publishProductEvent(ctx context.Context, eventType, publicID string) {
+	product, err := p.productRepo.GetByPublicID(ctx, publicID)
+	if err != nil || product == nil {
+		logger.Error("service: failed to fetch product for event publishing",
+			zap.String("public_id", publicID), zap.Error(err))
+		return
+	}
+
+	minPrice := math.MaxFloat64
+	maxPrice := 0.0
+	inStock := false
+
+	for _, v := range product.Variants {
+		if v.Price < minPrice {
+			minPrice = v.Price
+		}
+		if v.Price > maxPrice {
+			maxPrice = v.Price
+		}
+		if v.Inventory > 0 {
+			inStock = true
+		}
+	}
+
+	// If no variants exist, set prices to 0
+	if len(product.Variants) == 0 {
+		minPrice = 0
+	}
+
+	// Extract primary image URL
+	imageURL := ""
+	for _, img := range product.Images {
+		if img.IsPrimary {
+			imageURL = img.URL
+			break
+		}
+	}
+	if imageURL == "" && len(product.Images) > 0 {
+		imageURL = product.Images[0].URL
+	}
+
+	event := map[string]interface{}{
+		"event": eventType,
+		"product": map[string]interface{}{
+			"public_id":     product.PublicID,
+			"title":         product.Title,
+			"brand":         product.Brand,
+			"description":   product.Description,
+			"category_name": product.Category.Name,
+			"seller_name":   product.Seller.Name,
+			"slug":          product.Slug,
+			"min_price":     minPrice,
+			"max_price":     maxPrice,
+			"in_stock":      inStock,
+			"image_url":     imageURL,
+		},
+	}
+
+	if pubErr := p.broker.Publish(ctx, "catalog_events", eventType, event); pubErr != nil {
+		logger.Error("service: failed to publish catalog event",
+			zap.String("event", eventType),
+			zap.String("public_id", publicID),
+			zap.Error(pubErr))
+	} else {
+		logger.Info("service: published catalog event",
+			zap.String("event", eventType),
+			zap.String("public_id", publicID))
+	}
 }
