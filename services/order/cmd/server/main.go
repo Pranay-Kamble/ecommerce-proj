@@ -69,6 +69,7 @@ func main() {
 		&domain.OrderItem{},
 		&domain.CustomerProfile{},
 		&domain.Address{},
+		&domain.Invoice{},
 	)
 	if err != nil {
 		logger.Fatal("Failed to migrate database", zap.Error(err))
@@ -82,6 +83,7 @@ func main() {
 	cartRepo := repository.NewCartRepository(rd.Redis)
 	customerRepo := repository.NewCustomerRepository(pg.DB)
 	orderRepo := repository.NewOrderRepository(pg.DB)
+	invoiceRepo := repository.NewInvoiceRepository(pg.DB)
 
 	catalogGrpcURL := os.Getenv("CATALOG_GRPC_URL")
 	if catalogGrpcURL == "" {
@@ -132,6 +134,16 @@ func main() {
 		logger.Fatal("Failed to initialize order service", zap.Error(err))
 	}
 
+	s3Client, err := client.NewS3Client()
+	if err != nil {
+		logger.Fatal("Failed to initialize S3 Client", zap.Error(err))
+	}
+
+	invoiceSvc, err := service.NewInvoiceService(invoiceRepo, orderRepo, s3Client)
+	if err != nil {
+		logger.Fatal("Failed to initialize invoice service", zap.Error(err))
+	}
+
 	rabbitConn, err := amqp.Dial(rabbitMQURL)
 	if err != nil {
 		logger.Fatal("Failed to dial RabbitMQ for consumer", zap.Error(err))
@@ -144,7 +156,7 @@ func main() {
 	}
 	defer rabbitChannel.Close()
 
-	paymentConsumer := workers.NewPaymentConsumer(rabbitChannel, orderSvc, cartRepo, catalogClient)
+	paymentConsumer := workers.NewPaymentConsumer(rabbitChannel, orderSvc, invoiceSvc, cartRepo, catalogClient)
 
 	go func() {
 		logger.Info("Starting Payment RabbitMQ Consumer...")
@@ -155,7 +167,7 @@ func main() {
 
 	cartHandler := handler.NewCartHandler(cartSvc)
 	customerHandler := handler.NewCustomerHandler(customerSvc)
-	orderHandler := handler.NewOrderHandler(orderSvc)
+	orderHandler := handler.NewOrderHandler(orderSvc, invoiceSvc)
 
 	router := gin.Default()
 	handler.RegisterRoutes(router, cartHandler, customerHandler, orderHandler)
