@@ -15,10 +15,11 @@ import (
 )
 
 type PaymentConsumer struct {
-	rabbitChannel *amqp.Channel
-	orderService  service.OrderService
-	cartRepo      repository.CartRepository
-	catalogClient pb.CatalogServiceClient
+	rabbitChannel  *amqp.Channel
+	orderService   service.OrderService
+	invoiceService service.InvoiceService
+	cartRepo       repository.CartRepository
+	catalogClient  pb.CatalogServiceClient
 }
 
 type PaymentEventPayload struct {
@@ -27,12 +28,13 @@ type PaymentEventPayload struct {
 	Status  string `json:"status"`
 }
 
-func NewPaymentConsumer(ch *amqp.Channel, svc service.OrderService, cartRepo repository.CartRepository, catalogClient pb.CatalogServiceClient) *PaymentConsumer {
+func NewPaymentConsumer(ch *amqp.Channel, svc service.OrderService, invSvc service.InvoiceService, cartRepo repository.CartRepository, catalogClient pb.CatalogServiceClient) *PaymentConsumer {
 	return &PaymentConsumer{
-		rabbitChannel: ch,
-		orderService:  svc,
-		cartRepo:      cartRepo,
-		catalogClient: catalogClient,
+		rabbitChannel:  ch,
+		orderService:   svc,
+		invoiceService: invSvc,
+		cartRepo:       cartRepo,
+		catalogClient:  catalogClient,
 	}
 }
 func (c *PaymentConsumer) StartListening(ctx context.Context) error {
@@ -149,6 +151,14 @@ func (c *PaymentConsumer) processMessage(ctx context.Context, msg amqp.Delivery)
 				logger.Error("Failed to clear cart, but order was paid", zap.Error(err))
 			} else {
 				logger.Info("Cart successfully cleared for user", zap.String("user_id", order.UserID))
+			}
+			
+			// Generate and store invoice
+			err = c.invoiceService.GenerateAndStore(ctx, order)
+			if err != nil {
+				logger.Error("Failed to generate and store invoice", zap.Error(err))
+			} else {
+				logger.Info("Invoice generated successfully", zap.String("order_id", payload.OrderID))
 			}
 		}
 	}
