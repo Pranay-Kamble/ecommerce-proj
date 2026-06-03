@@ -19,6 +19,7 @@ type OrderService interface {
 	GetOrder(ctx context.Context, publicID string, userID string) (*domain.Order, error)
 	GetUserOrders(ctx context.Context, userID string) ([]domain.Order, error)
 	UpdateOrderStatus(ctx context.Context, id string, status string) error
+	CancelOrder(ctx context.Context, id string, userID string) error
 }
 
 type orderService struct {
@@ -159,6 +160,26 @@ func (s *orderService) UpdateOrderStatus(ctx context.Context, orderId string, st
 	err = s.orderRepo.UpdateOrder(ctx, order)
 	if err != nil {
 		return fmt.Errorf("service: failed to update order: %w", err)
+	}
+	return nil
+}
+
+func (s *orderService) CancelOrder(ctx context.Context, id string, userID string) error {
+	order, err := s.orderRepo.GetOrderByPublicID(ctx, id)
+	if err != nil {
+		return fmt.Errorf("service: failed to fetch order: %w", err)
+	}
+	if order.UserID != userID {
+		return fmt.Errorf("service: unauthorized to cancel this order")
+	}
+	if order.Status != "pending" {
+		return fmt.Errorf("service: only pending orders can be cancelled")
+	}
+	
+	order.Status = "cancelled"
+	err = s.orderRepo.UpdateOrder(ctx, order)
+	if err != nil {
+		return fmt.Errorf("service: failed to update order status to cancelled: %w", err)
 	}
 	return nil
 }

@@ -15,11 +15,12 @@ import (
 )
 
 type OrderHandler struct {
-	orderService service.OrderService
+	orderService   service.OrderService
+	invoiceService service.InvoiceService
 }
 
-func NewOrderHandler(orderService service.OrderService) *OrderHandler {
-	return &OrderHandler{orderService: orderService}
+func NewOrderHandler(orderService service.OrderService, invoiceService service.InvoiceService) *OrderHandler {
+	return &OrderHandler{orderService: orderService, invoiceService: invoiceService}
 }
 
 type checkoutRequest struct {
@@ -137,8 +138,45 @@ func (h *OrderHandler) GetUserOrders(c *gin.Context) {
 }
 
 func (h *OrderHandler) GetInvoice(c *gin.Context) {
-	c.JSON(http.StatusNotFound, gin.H{
-		"error":   "Invoice generation not yet implemented",
-		"message": "This feature will be available soon.",
-	})
+	userID := c.GetString("user_id")
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	publicID := c.Param("public_id")
+	if publicID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "order id is required"})
+		return
+	}
+
+	url, err := h.invoiceService.GetInvoiceURL(c.Request.Context(), publicID, userID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "invoice not found or not generated yet", "details": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"download_url": url})
+}
+
+func (h *OrderHandler) CancelOrder(c *gin.Context) {
+	userID := c.GetString("user_id")
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	publicID := c.Param("public_id")
+	if publicID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "order id is required"})
+		return
+	}
+
+	err := h.orderService.CancelOrder(c.Request.Context(), publicID, userID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to cancel order", "details": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "order cancelled successfully"})
 }
