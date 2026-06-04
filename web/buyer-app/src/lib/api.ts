@@ -49,3 +49,30 @@ const addAuthToken = (api: ReturnType<typeof axios.create>) => {
 
 addAuthToken(orderApi);
 addAuthToken(authApi);
+
+// Auto-refresh on 401 — tries once per request, then rejects
+const AUTH_BASE = process.env.NEXT_PUBLIC_AUTH_API_URL || "http://localhost:8080";
+
+orderApi.interceptors.response.use(
+  (res) => res,
+  async (error) => {
+    const originalRequest = error.config;
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      try {
+        const refreshRes = await fetch(`${AUTH_BASE}/api/v1/auth/refresh`, {
+          method: "POST",
+          credentials: "include",
+        });
+        if (refreshRes.ok) {
+          const data = await refreshRes.json();
+          const jwt = data.jwt;
+          if (typeof window !== "undefined") localStorage.setItem("access_token", jwt);
+          originalRequest.headers.Authorization = `Bearer ${jwt}`;
+          return orderApi(originalRequest);
+        }
+      } catch {}
+    }
+    return Promise.reject(error);
+  }
+);
