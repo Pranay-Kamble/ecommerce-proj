@@ -73,7 +73,7 @@ export interface Cart {
 }
 
 export interface Order {
-  id: string;
+  id: string;           // maps to PublicID (json:"id")
   user_id: string;
   total_amount: number;
   status: string;
@@ -85,10 +85,26 @@ export interface Order {
   shipping_zip: string;
   items: OrderItem[];
   created_at: string;
+  updated_at: string;
 }
 
 export interface OrderItem {
   product_id: string;
   quantity: number;
   price: number;
+}
+
+export interface Address {
+  title?: string;
+  address_line: string;
+  city: string;
+  state: string;
+  zip_code: string;
+  is_default?: boolean;
+}
+
+export interface CustomerProfile {
+  name: string;
+  phone: string;
+  addresses?: Address[];
 }

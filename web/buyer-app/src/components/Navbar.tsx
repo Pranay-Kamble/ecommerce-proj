@@ -1,14 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { ShoppingCart, Search, Package, Menu, X, Zap } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import {
+  ShoppingCart, Search, Package, Menu, X, Zap, User, LogOut,
+} from "lucide-react";
 import { useState, useEffect } from "react";
 import { useCartStore, useAuthStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
+import { authApi } from "@/lib/api";
+import toast from "react-hot-toast";
 
 export function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { itemCount } = useCartStore();
   const { isAuthenticated, logout } = useAuthStore();
   const [isScrolled, setIsScrolled] = useState(false);
@@ -24,6 +29,18 @@ export function Navbar() {
     { href: "/", label: "Home" },
     { href: "/products", label: "Products" },
   ];
+
+  const handleLogout = async () => {
+    try {
+      await authApi.post("/logout");
+    } catch {
+      // best-effort
+    }
+    logout();
+    toast.success("Logged out");
+    router.push("/");
+    setIsMobileOpen(false);
+  };
 
   return (
     <header
@@ -59,12 +76,22 @@ export function Navbar() {
           </nav>
 
           {/* Right actions */}
-          <div className="flex items-center gap-2">
-            <Link href="/products" className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-all duration-200">
+          <div className="flex items-center gap-1.5">
+            {/* Search */}
+            <Link
+              href="/products"
+              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-all duration-200"
+              title="Search"
+            >
               <Search className="w-5 h-5" />
             </Link>
 
-            <Link href="/cart" className="relative p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-all duration-200">
+            {/* Cart */}
+            <Link
+              href="/cart"
+              className="relative p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-all duration-200"
+              title="Cart"
+            >
               <ShoppingCart className="w-5 h-5" />
               {itemCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-primary text-primary-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
@@ -74,16 +101,31 @@ export function Navbar() {
             </Link>
 
             {isAuthenticated ? (
-              <div className="flex items-center gap-2">
-                <Link href="/orders" className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-all duration-200">
+              <div className="flex items-center gap-1.5">
+                {/* Orders */}
+                <Link
+                  href="/orders"
+                  className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-all duration-200"
+                  title="My Orders"
+                >
                   <Package className="w-5 h-5" />
                 </Link>
+                {/* Profile */}
+                <Link
+                  href="/profile"
+                  className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-all duration-200"
+                  title="Profile"
+                >
+                  <User className="w-5 h-5" />
+                </Link>
+                {/* Logout */}
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={logout}
-                  className="hidden md:flex border-border/50 text-muted-foreground hover:text-foreground"
+                  onClick={handleLogout}
+                  className="hidden md:flex border-border/50 text-muted-foreground hover:text-destructive hover:border-destructive/50 gap-1.5"
                 >
+                  <LogOut className="w-3.5 h-3.5" />
                   Logout
                 </Button>
               </div>
@@ -124,12 +166,22 @@ export function Navbar() {
                 </Link>
               ))}
               {isAuthenticated ? (
-                <button
-                  onClick={() => { logout(); setIsMobileOpen(false); }}
-                  className="px-4 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary text-left"
-                >
-                  Logout
-                </button>
+                <>
+                  <Link href="/orders" onClick={() => setIsMobileOpen(false)}
+                    className="px-4 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary flex items-center gap-2">
+                    <Package className="w-4 h-4" /> My Orders
+                  </Link>
+                  <Link href="/profile" onClick={() => setIsMobileOpen(false)}
+                    className="px-4 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary flex items-center gap-2">
+                    <User className="w-4 h-4" /> Profile
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="px-4 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 text-left flex items-center gap-2"
+                  >
+                    <LogOut className="w-4 h-4" /> Logout
+                  </button>
+                </>
               ) : (
                 <Link href="/auth/login" onClick={() => setIsMobileOpen(false)}
                   className="px-4 py-2.5 rounded-lg text-sm font-medium text-primary hover:bg-primary/10"

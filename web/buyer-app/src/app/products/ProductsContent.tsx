@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Search, SlidersHorizontal, X, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,20 @@ export default function ProductsContent() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+
+  // Close suggestions on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   const fetchProducts = useCallback(async () => {
     setLoading(true);
@@ -59,10 +73,28 @@ export default function ProductsContent() {
     }
   }, [query, selectedCategory, minPrice, maxPrice, inStockOnly]);
 
+  // Autocomplete suggestions
+  const fetchSuggestions = useCallback(async (q: string) => {
+    if (q.trim().length < 2) { setSuggestions([]); return; }
+    try {
+      const res = await searchApi.get("/products", { params: { q, size: "5" } });
+      const hits: SearchProduct[] = res.data?.hits ?? [];
+      setSuggestions(hits.map((h) => h.title).filter(Boolean).slice(0, 5));
+    } catch {
+      setSuggestions([]);
+    }
+  }, []);
+
   useEffect(() => {
     const timer = setTimeout(fetchProducts, 400);
     return () => clearTimeout(timer);
   }, [fetchProducts]);
+
+  // Separate debounce for autocomplete (faster, 200ms)
+  useEffect(() => {
+    const timer = setTimeout(() => fetchSuggestions(query), 200);
+    return () => clearTimeout(timer);
+  }, [query, fetchSuggestions]);
 
   const handleCategoryChange = (id: string | undefined) => {
     setSelectedCategory(id);
@@ -96,22 +128,40 @@ export default function ProductsContent() {
           </h1>
 
           <div className="flex gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <div ref={searchRef} className="relative flex-1">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
               <Input
                 id="search-input"
                 placeholder="Search products, brands, categories..."
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => { setQuery(e.target.value); setShowSuggestions(true); }}
+                onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
                 className="pl-10 h-11 bg-secondary border-border/50 focus:border-primary/50"
+                autoComplete="off"
               />
               {query && (
                 <button
-                  onClick={() => setQuery("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  onClick={() => { setQuery(""); setSuggestions([]); setShowSuggestions(false); }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground z-10"
                 >
                   <X className="w-4 h-4" />
                 </button>
+              )}
+              {/* Autocomplete dropdown */}
+              {showSuggestions && suggestions.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 glass-strong rounded-xl border border-border/60 shadow-xl z-50 overflow-hidden">
+                  {suggestions.map((s, i) => (
+                    <button
+                      key={i}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => { setQuery(s); setShowSuggestions(false); }}
+                      className="w-full px-4 py-2.5 text-left text-sm text-foreground hover:bg-secondary flex items-center gap-3 transition-colors border-b border-border/20 last:border-0"
+                    >
+                      <Search className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                      {s}
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
             <Button
