@@ -1,29 +1,31 @@
-version: '3.8'
-
-# Future Todos
-# Use .env file to remove usernames and passwords
+# deploy/docker-compose.yml
+# Infrastructure services for Nexus Ecommerce Platform
+# Run: docker compose up -d
 
 services:
   # ============================================================
-  # SERVICE 1: POSTGRESQL (The Main Database)
+  # 1. POSTGRESQL — Primary Database
   # ============================================================
   postgres:
-    image: postgres:15-alpine  # Use the lightweight 'Alpine' version of Postgres 15
+    image: postgres:15-alpine
     container_name: nexus_postgres
     ports:
       - "5432:5432"
     environment:
-      - POSTGRES_USER=admin
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=postgres
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: postgres
     volumes:
-      # This maps local 'init.sql' file into the container's
-      # special startup folder. This is how the 5 DBs get created automatically
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   # ============================================================
-  # SERVICE 2: REDIS (The Temporary Memory / Cache)
+  # 2. REDIS — Cart Storage & Cache
   # ============================================================
   redis:
     image: redis:7-alpine
@@ -32,41 +34,57 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   # ============================================================
-  # SERVICE 3: RABBITMQ (The Messenger)
+  # 3. RABBITMQ — Async Message Broker
   # ============================================================
   rabbitmq:
     image: rabbitmq:3-management-alpine
     container_name: nexus_rabbitmq
     ports:
-      - "5672:5672"   # The port Go code uses to send messages
-      - "15672:15672" # The port used to see the Dashboard in browser
+      - "5672:5672"    # AMQP port (used by Go services)
+      - "15672:15672"  # Management UI — http://localhost:15672 (admin/password)
     environment:
-      - RABBITMQ_DEFAULT_USER=admin
-      - RABBITMQ_DEFAULT_PASS=password
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: password
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # ============================================================
-  # SERVICE 4: MINIO (The File Storage -> Fake AWS S3)
+  # 4. MINIO — S3-Compatible File Storage
+  #    Console UI: http://localhost:9001 (admin/password)
+  #    Create buckets: ecommerce-images, ecommerce-invoices
   # ============================================================
   minio:
     image: minio/minio
     container_name: nexus_minio
     ports:
-      - "9000:9000" # The API port (for code)
-      - "9001:9001" # The Console port (for browser)
+      - "9000:9000"  # API port (used by Go services)
+      - "9001:9001"  # Console UI
     environment:
-      - MINIO_ROOT_USER=admin
-      - MINIO_ROOT_PASSWORD=password
-    # This command starts the server and tells it to serve the UI on port 9001
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: password
     command: server /data --console-address ":9001"
     volumes:
       - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # ============================================================
-  # SERVICE 5: ELASTICSEARCH (Search Engine for Products)
+  # 5. ELASTICSEARCH — Product Search Engine
   # ============================================================
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.17.0
@@ -79,8 +97,13 @@ services:
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
 
-# This section declares the "Hard Drives" (Volumes) we used above, for data persistence when docker container is closed
+# Named volumes for data persistence across container restarts
 volumes:
   postgres_data:
   redis_data:

@@ -27,9 +27,12 @@ Thumbs.db
 # Security
 *secrets/
 
-# Environment Variables (Security!)
+# Environment Variables (Security — real secrets never committed)
 .env
 *.env
+# But allow example files for documentation
+!.env.example
+!*.env.example
 
 # Docker Volumes (If you mapped them locally)
 postgres_data/
