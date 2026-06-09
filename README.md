@@ -4,7 +4,7 @@
 
 ![Nexus Banner](./All%20Services.excalidraw.png)
 
-**A full-stack, microservices-based e-commerce platform built in 7 days.**  
+**A full-stack, microservices-based e-commerce platform.**  
 Go backend · Next.js 16 frontend · Stripe payments · Elasticsearch · gRPC · RabbitMQ
 
 [![Go](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go)](https://golang.org/)
@@ -18,7 +18,7 @@ Go backend · Next.js 16 frontend · Stripe payments · Elasticsearch · gRPC ·
 
 ## ✨ What Is This?
 
-**Nexus** is a production-grade e-commerce backend built as a 7-day sprint project. It demonstrates advanced backend architecture patterns — clean architecture, the outbox pattern, gRPC inter-service communication, event-driven messaging, and JWT + OAuth2 authentication — all tied together with a polished Next.js buyer frontend.
+**Nexus** is a production-grade e-commerce backend. It demonstrates advanced backend architecture patterns — clean architecture, the outbox pattern, gRPC inter-service communication, event-driven messaging, and JWT + OAuth2 authentication — all tied together with a polished Next.js buyer frontend.
 
 ---
 
