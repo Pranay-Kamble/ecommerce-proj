@@ -1,11 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { ShoppingCart, Star, Package } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Product, SearchProduct } from "@/lib/types";
+import { Product, SearchProduct, ProductImage } from "@/lib/types";
 import { useCartStore, useAuthStore } from "@/lib/store";
 import { orderApi } from "@/lib/api";
 import toast from "react-hot-toast";
@@ -14,28 +13,41 @@ type ProductCardProps =
   | { product: Product; searchProduct?: never }
   | { product?: never; searchProduct: SearchProduct };
 
+/** Normalize images from either {url, altText} objects or plain strings */
+function getImageUrl(img: ProductImage | string): string {
+  return typeof img === "string" ? img : img.url;
+}
+
 export function ProductCard({ product, searchProduct }: ProductCardProps) {
   const { addItem } = useCartStore();
   const { isAuthenticated } = useAuthStore();
 
-  const id = product?.public_id ?? searchProduct!.public_id;
+  // Support both "id" (catalog API) and "public_id" (search API / legacy)
+  const id = product?.id ?? product?.public_id ?? searchProduct!.public_id;
   const title = product?.title ?? searchProduct!.title;
   const brand = product?.brand ?? searchProduct!.brand;
-  const images = product?.images ?? searchProduct?.images ?? [];
+
+  const rawImages = product?.images ?? searchProduct?.images ?? [];
+  const imageUrls: string[] = rawImages.map((img) => getImageUrl(img as ProductImage | string));
+
   const inStock = product
     ? product.variants?.some((v) => v.inventory > 0) ?? true
     : searchProduct!.in_stock;
+
+  const variantPrices = product?.variants?.map((v) => v.price) ?? [];
   const minPrice = product
-    ? Math.min(...(product.variants?.map((v) => v.price) ?? [0]))
+    ? variantPrices.length > 0 ? Math.min(...variantPrices) : 0
     : searchProduct!.min_price;
   const maxPrice = product
-    ? Math.max(...(product.variants?.map((v) => v.price) ?? [0]))
+    ? variantPrices.length > 0 ? Math.max(...variantPrices) : 0
     : searchProduct!.max_price;
 
   const priceDisplay =
-    minPrice === maxPrice
-      ? `₹${minPrice.toLocaleString()}`
-      : `₹${minPrice.toLocaleString()} – ₹${maxPrice.toLocaleString()}`;
+    !minPrice && !maxPrice
+      ? "Price on request"
+      : minPrice === maxPrice
+      ? `₹${minPrice.toLocaleString("en-IN")}`
+      : `₹${minPrice.toLocaleString("en-IN")} – ₹${maxPrice.toLocaleString("en-IN")}`;
 
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -54,10 +66,10 @@ export function ProductCard({ product, searchProduct }: ProductCardProps) {
 
     try {
       await orderApi.post("/cart/add", {
-        product_variant_id: firstVariant.public_id,
+        product_variant_id: firstVariant.id,
         quantity: 1,
       });
-      addItem({ product_variant_id: firstVariant.public_id, quantity: 1 });
+      addItem({ product_variant_id: firstVariant.id, quantity: 1 });
       toast.success("Added to cart!");
     } catch {
       toast.error("Failed to add to cart");
@@ -67,21 +79,12 @@ export function ProductCard({ product, searchProduct }: ProductCardProps) {
   return (
     <Link href={`/products/${id}`} className="group block">
       <div className="glass rounded-2xl overflow-hidden card-hover border border-border/50 group-hover:border-primary/30 transition-all duration-300">
-        {/* Image */}
+        {/* Image — placeholder until MinIO/CDN is configured */}
         <div className="relative aspect-[4/3] bg-secondary overflow-hidden">
-          {images.length > 0 ? (
-            <Image
-              src={images[0]}
-              alt={title}
-              fill
-              className="object-cover transition-transform duration-500 group-hover:scale-105"
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-secondary">
-              <Package className="w-12 h-12 text-muted-foreground/30" />
-            </div>
-          )}
+          <div className="w-full h-full flex items-center justify-center"
+            style={{ background: "linear-gradient(135deg, oklch(0.2 0.04 285) 0%, oklch(0.15 0.03 285) 100%)" }}>
+            <Package className="w-12 h-12 text-muted-foreground/30" />
+          </div>
           {/* Badges */}
           <div className="absolute top-3 left-3 flex gap-2">
             {!inStock && (
@@ -89,12 +92,12 @@ export function ProductCard({ product, searchProduct }: ProductCardProps) {
                 Out of Stock
               </Badge>
             )}
-            {inStock && minPrice < 500 && (
+            {inStock && minPrice !== undefined && minPrice < 500 && minPrice > 0 && (
               <Badge className="text-xs font-medium bg-primary/90">Great Value</Badge>
             )}
           </div>
           {/* Quick add overlay */}
-          {inStock && (
+          {inStock && product?.variants?.[0] && (
             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3">
               <Button
                 onClick={handleAddToCart}

@@ -9,7 +9,9 @@ import { ProductCard } from "@/components/ProductCard";
 async function getFeaturedProducts(): Promise<Product[]> {
   try {
     const res = await catalogApi.get("/products?limit=8");
-    return res.data?.products ?? res.data ?? [];
+    // Catalog API returns { data: [...] }
+    const arr = res.data?.data ?? res.data?.products ?? res.data;
+    return Array.isArray(arr) ? arr : [];
   } catch {
     return [];
   }
@@ -18,7 +20,9 @@ async function getFeaturedProducts(): Promise<Product[]> {
 async function getCategories(): Promise<Category[]> {
   try {
     const res = await catalogApi.get("/categories");
-    return res.data?.categories ?? res.data ?? [];
+    // Catalog API returns { data: [...] }
+    const arr = res.data?.data ?? res.data?.categories ?? res.data;
+    return Array.isArray(arr) ? arr : [];
   } catch {
     return [];
   }
@@ -198,7 +202,7 @@ export default async function HomePage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {products.map((product) => (
-                <ProductCard key={product.public_id} product={product} />
+                <ProductCard key={product.id} product={product} />
               ))}
             </div>
           )}

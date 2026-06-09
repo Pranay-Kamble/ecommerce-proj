@@ -19,7 +19,10 @@ export function CategorySidebar({ selectedCategory, onSelectCategory }: Category
   useEffect(() => {
     catalogApi
       .get("/categories")
-      .then((r) => setCategories(r.data?.categories ?? r.data ?? []))
+      .then((r) => {
+        const arr = r.data?.data ?? r.data?.categories ?? r.data;
+        setCategories(Array.isArray(arr) ? arr : []);
+      })
       .catch(() => setCategories([]))
       .finally(() => setLoading(false));
   }, []);
@@ -51,10 +54,10 @@ export function CategorySidebar({ selectedCategory, onSelectCategory }: Category
               ))
             : categories.map((cat) => (
                 <button
-                  key={cat.public_id}
-                  onClick={() => onSelectCategory(cat.public_id)}
+                  key={cat.id}
+                  onClick={() => onSelectCategory(cat.id)}
                   className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
-                    selectedCategory === cat.public_id
+                    selectedCategory === cat.id
                       ? "bg-primary/15 text-primary"
                       : "text-muted-foreground hover:text-foreground hover:bg-secondary"
                   }`}

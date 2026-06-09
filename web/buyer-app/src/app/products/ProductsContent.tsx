@@ -61,7 +61,9 @@ export default function ProductsContent() {
         if (selectedCategory) params.category_id = selectedCategory;
 
         const res = await catalogApi.get("/products", { params });
-        const products = res.data?.products ?? res.data ?? [];
+        // Catalog API returns { data: [...] }
+        const raw = res.data?.data ?? res.data?.products ?? res.data;
+        const products = Array.isArray(raw) ? raw : [];
         setResults(products);
         setTotal(products.length);
       }
@@ -298,7 +300,7 @@ export default function ProductsContent() {
                   isSearchProduct(p) ? (
                     <ProductCard key={p.public_id} searchProduct={p} />
                   ) : (
-                    <ProductCard key={(p as Product).public_id} product={p as Product} />
+                    <ProductCard key={(p as Product).id} product={p as Product} />
                   )
                 )}
               </div>

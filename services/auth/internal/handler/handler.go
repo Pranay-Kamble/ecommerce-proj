@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -445,7 +447,38 @@ func (h *AuthHandler) GoogleCallback(c *gin.Context) {
 		return
 	}
 
-	h.issueTokensAndRespond(c, user.ID, user.Email, user.Role, user.IsOnboarded, "User logged in", http.StatusCreated)
+	// Manually generate JWT (cannot use issueTokensAndRespond because we need to redirect, not return JSON)
+	jwtToken, err := utils.GetJWT(user.ID, user.Email, user.Role, user.IsOnboarded)
+	if err != nil {
+		logger.Error("handler: failed to generate JWT for OAuth", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		return
+	}
+
+	refreshToken, hashedRefreshToken, familyId, err := utils.GetRefreshTokenString()
+	if err != nil {
+		logger.Error("handler: failed to generate refresh token for OAuth", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		return
+	}
+	_, err = h.service.SaveRefreshToken(c.Request.Context(), user.ID, hashedRefreshToken, familyId)
+	if err != nil {
+		logger.Error("handler: failed to save refresh token for OAuth", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		return
+	}
+
+	// Set HttpOnly refresh token cookie
+	c.SetCookie("refreshToken", refreshToken, 60*60*24*7, "/", "", false, true)
+
+	// Redirect browser to Next.js frontend with JWT as query param
+	// Frontend /auth/callback page captures it and stores in Zustand + localStorage
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		frontendURL = "http://localhost:3000"
+	}
+	redirectTarget := fmt.Sprintf("%s/auth/callback?jwt=%s", frontendURL, url.QueryEscape(jwtToken))
+	c.Redirect(http.StatusFound, redirectTarget)
 }
 
 // GetPublicKey godoc

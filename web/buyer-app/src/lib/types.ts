@@ -1,43 +1,59 @@
-// Product types matching backend domain models
+// Product types matching catalog service domain JSON tags
+export interface ProductImage {
+  url: string;
+  altText: string;
+  isPrimary: boolean;
+}
+
 export interface ProductVariant {
-  id: string;
-  public_id: string;
-  product_id: string;
+  id: string;            // json:"id" (PublicID)
+  product_id?: string;
   sku: string;
   price: number;
-  compare_price?: number;
   inventory: number;
-  specifications?: Record<string, string>;
-  created_at: string;
+  specifications?: Record<string, unknown>;
+  images?: ProductImage[];
+  createdAt?: string;
 }
 
 export interface Product {
-  id: string;
-  public_id: string;
+  id: string;            // json:"id" (PublicID) — catalog uses "id" not "public_id"
+  public_id?: string;    // alias for compatibility with search results
   title: string;
   slug: string;
   description: string;
   brand: string;
-  category_id: string;
-  category_name?: string;
-  seller_id: string;
-  seller_name?: string;
-  images: string[];
+  highlights?: string[];
+  dimensions?: Record<string, unknown>;
+  category?: Category;
+  seller?: Seller;
+  images: ProductImage[] | string[]; // catalog returns objects; search returns strings
   variants: ProductVariant[];
   min_price?: number;
   max_price?: number;
   in_stock?: boolean;
-  created_at: string;
-  updated_at: string;
+  createdAt?: string;
+  updatedAt?: string;
+  // legacy snake_case aliases
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Seller {
+  id: string;
+  name: string;
+  description?: string;
+  logoUrl?: string;
+  supportEmail?: string;
 }
 
 export interface Category {
-  id: string;
-  public_id: string;
+  id: string;            // json:"id" (PublicID)
+  public_id?: string;    // alias
   name: string;
-  slug: string;
-  parent_id?: string;
+  slug?: string;
   path?: string;
+  parentId?: string;
   children?: Category[];
 }
 

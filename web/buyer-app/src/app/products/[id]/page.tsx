@@ -39,7 +39,8 @@ export default function ProductDetailPage() {
     catalogApi
       .get(`/products/${id}`)
       .then((res) => {
-        const p: Product = res.data?.product ?? res.data;
+        // Catalog returns { data: product } or { product: ... }
+        const p: Product = res.data?.data ?? res.data?.product ?? res.data;
         setProduct(p);
         if (p.variants?.length) setSelectedVariant(p.variants[0]);
       })
@@ -59,10 +60,10 @@ export default function ProductDetailPage() {
     setAdding(true);
     try {
       await orderApi.post("/cart/add", {
-        product_variant_id: selectedVariant.public_id,
+        product_variant_id: selectedVariant.id,
         quantity,
       });
-      addItem({ product_variant_id: selectedVariant.public_id, quantity });
+      addItem({ product_variant_id: selectedVariant.id, quantity });
       toast.success(`${product?.title} added to cart!`);
     } catch {
       toast.error("Failed to add to cart");
@@ -102,7 +103,10 @@ export default function ProductDetailPage() {
   }
 
   const inStock = selectedVariant ? selectedVariant.inventory > 0 : false;
-  const images = product.images ?? [];
+  // Normalize images to URL strings (catalog returns {url, altText} objects)
+  const images: string[] = (product.images ?? []).map((img) =>
+    typeof img === "string" ? img : (img as { url: string }).url
+  );
 
   return (
     <div className="min-h-screen">
@@ -129,43 +133,16 @@ export default function ProductDetailPage() {
         </Link>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Images */}
-          <div className="space-y-4">
-            <div className="relative aspect-square glass rounded-2xl overflow-hidden border border-border/50">
-              {images.length > 0 ? (
-                <Image
-                  src={images[selectedImage]}
-                  alt={product.title}
-                  fill
-                  className="object-cover"
-                  priority
-                  sizes="(max-width: 1024px) 100vw, 50vw"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <Package className="w-20 h-20 text-muted-foreground/20" />
-                </div>
-              )}
-              {!inStock && (
-                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                  <Badge variant="destructive" className="text-base px-4 py-2">Out of Stock</Badge>
-                </div>
-              )}
+          {/* Main image — placeholder until MinIO/CDN configured */}
+          <div className="relative aspect-square glass rounded-2xl overflow-hidden border border-border/50">
+            <div className="w-full h-full flex flex-col items-center justify-center gap-3"
+              style={{ background: "linear-gradient(135deg, oklch(0.2 0.04 285) 0%, oklch(0.15 0.03 285) 100%)" }}>
+              <Package className="w-20 h-20 text-muted-foreground/20" />
+              <span className="text-xs text-muted-foreground/50">Image preview unavailable</span>
             </div>
-            {/* Thumbnail strip */}
-            {images.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto pb-2">
-                {images.map((img, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setSelectedImage(i)}
-                    className={`relative w-16 h-16 rounded-xl overflow-hidden border-2 shrink-0 transition-all ${
-                      selectedImage === i ? "border-primary" : "border-border/50 opacity-60 hover:opacity-100"
-                    }`}
-                  >
-                    <Image src={img} alt={`${product.title} ${i + 1}`} fill className="object-cover" sizes="64px" />
-                  </button>
-                ))}
+            {!inStock && (
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                <Badge variant="destructive" className="text-base px-4 py-2">Out of Stock</Badge>
               </div>
             )}
           </div>
@@ -204,13 +181,8 @@ export default function ProductDetailPage() {
             <div className="glass rounded-2xl p-5 border border-border/50">
               <div className="flex items-baseline gap-3">
                 <span className="font-heading font-bold text-3xl text-foreground">
-                  ₹{selectedVariant?.price.toLocaleString() ?? "—"}
+                  ₹{selectedVariant?.price.toLocaleString("en-IN") ?? "—"}
                 </span>
-                {selectedVariant?.compare_price && (
-                  <span className="text-muted-foreground line-through text-lg">
-                    ₹{selectedVariant.compare_price.toLocaleString()}
-                  </span>
-                )}
               </div>
               <div className="flex items-center gap-2 mt-2">
                 {inStock ? (
@@ -231,10 +203,10 @@ export default function ProductDetailPage() {
                 <div className="flex flex-wrap gap-2">
                   {product.variants.map((v) => (
                     <button
-                      key={v.public_id}
+                      key={v.id}
                       onClick={() => setSelectedVariant(v)}
-                      className={`px-4 py-2 rounded-xl text-sm border font-medium transition-all ${
-                        selectedVariant?.public_id === v.public_id
+                      className={`px-4 py-2 rounded-xl text-sm border transition-all ${
+                        selectedVariant?.id === v.id
                           ? "bg-primary/15 text-primary border-primary/40 glow-primary"
                           : v.inventory === 0
                           ? "border-border/30 text-muted-foreground/40 cursor-not-allowed line-through"
@@ -277,7 +249,7 @@ export default function ProductDetailPage() {
                   {Object.entries(selectedVariant.specifications).map(([k, v]) => (
                     <div key={k} className="flex justify-between text-sm">
                       <dt className="text-muted-foreground">{k}</dt>
-                      <dd className="text-foreground font-medium">{v}</dd>
+                      <dd className="text-foreground font-medium">{String(v)}</dd>
                     </div>
                   ))}
                 </dl>
